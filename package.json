@@ -1,18 +1,37 @@
 {
-    "name": "sandeep-opportunity-os",
-    "version": "2.0.0",
-    "type": "module",
-    "scripts": {
-          "dev": "vite",
-          "build": "node scripts/build.mjs",
-          "lint": "node scripts/lint.mjs",
-          "typecheck": "node scripts/typecheck.mjs",
-          "test": "node tests/opportunity_os.test.mjs"
-    },
-    "dependencies": {
-          "react": "^18.2.0",
-          "react-dom": "^18.2.0",
-          "@supabase/supabase-js": "^2.39.0",
-          "lucide-react": "^0.300.0"
-    }
+  "name": "sandeep-opportunity-os",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sandeep Opportunity OS \u2014 Personal Opportunity Intelligence, Research & CRM Platform",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --test tests/opportunity_os.test.mjs",
+    "test:e2e": "playwright test",
+    "seed:supabase": "node scripts/seed-supabase.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.21.0",
+    "@playwright/test": "^1.50.1",
+    "@types/node": "^22.13.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.21.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.15.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.25.0",
+    "vite": "^6.2.0"
+  }
 }

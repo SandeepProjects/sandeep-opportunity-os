@@ -1,6 +1,6 @@
 # Sandeep Opportunity OS
 
-Private **Opportunity Intelligence System & Personal Operating System** for **Sandeep Gautam** (https://www.sandeep-gautam.com/).
+Private **Opportunity Intelligence System & Personal Operating System** for **Sandeep Gautam** ([sandeep-gautam.com](https://www.sandeep-gautam.com/)).
 
 Continuously discovers, verifies, deduplicates, scores, and tracks high-value opportunities across four pipelines:
 1. **Freelance Client Leads** (Cyprus & UK SMEs with deterministic website improvement opportunities)
@@ -8,10 +8,18 @@ Continuously discovers, verifies, deduplicates, scores, and tracks high-value op
 3. **Master's Programmes & Scholarships** (Official EU/UK/Cyprus postgraduate programmes and merit/alumni scholarships)
 4. **Remote Jobs & Internships** (Remote roles with strict regional & timezone eligibility gating)
 
-## Architecture Flow
+## Repository Structure
 
-`Research sources → discovery → verification → extraction → normalization → deduplication → scoring → PostgreSQL/Supabase DB → Google Sheets v4 sync → Dashboard UI → CRM action workflow`
+- `docs/` — Complete system documentation (`ARCHITECTURE.md`, `DATA_MODEL.md`, `RESEARCH_PIPELINE.md`, `SCORING.md`, `SHEETS_SYNC.md`, `SECURITY.md`, `DEPLOYMENT.md`)
+- `supabase/migrations/001_opportunity_os_schema.sql` — PostgreSQL + RLS relational schema
+- `src/types/opportunity.ts` — Strict TypeScript domain models
+- `src/engine/scoring.ts` — Explainable multi-component scoring & gate engine
+- `src/engine/deduplication.ts` — Canonical URL & fingerprint deduplicator
+- `src/engine/sheetsSync.ts` — Idempotent Google Sheets v4 synchronization engine
+- `tests/opportunity_os.test.mjs` — Zero-dependency Node.js automated test suite
 
-- **Canonical Database**: PostgreSQL / Supabase (`supabase/migrations/001_opportunity_os_schema.sql`) with Row-Level Security (RLS)
-- **Synchronized Human Control Layer**: 6-Tab Google Sheet (`Freelance_Leads`, `Visa_Relocation_Jobs`, `Masters_Scholarships`, `Remote_Jobs_Internships`, `Executive_Summary`, `Ops_And_Profile_Config`) keyed by persistent `Record ID` (`OPP-FL-001` .. `OPP-RM-006`)
-- **Zero Daily Git Commits for Data**: GitHub stores application code only; daily research updates flow through the database and Google Sheets sync layer while preserving `[USER]` CRM columns (`status`, `priority`, `favorite`, `follow_up_date`, `personal_notes`).
+## Quick Verification
+
+```bash
+node tests/opportunity_os.test.mjs
+```

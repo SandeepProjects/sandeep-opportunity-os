@@ -1,30 +1,226 @@
-import assert from 'assert/strict';
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  CANONICAL_WORKFLOW_STATUSES,
+  normalizeWorkflowStatus,
+  canonicalizeUrl,
+  computeFingerprint,
+  deduplicateOpportunities,
+  calculateExplainableScore,
+  classifyFollowUpBucket,
+  bucketFollowUps,
+  buildTodayPriorityQueue,
+  applyWorkflowTransition,
+  syncDatabaseToSheetRows,
+  normalizeScoreComponents
+} from "../src/engine/core.mjs";
 
-// Test URL Canonicalization
-const testUrl = "http://localhost/job/123?utm_source=google#about";
-const canonical = testUrl.split('?')[0].split('#')[0].toLowerCase().replace(/\/$/, '');
-assert.equal(canonical, "http://localhost/job/123");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const seedPath = path.resolve(__dirname, "../src/data/verified_seed_24.json");
+const seedData = JSON.parse(fs.readFileSync(seedPath, "utf8"));
 
-// Test Deduplication
-const list = ["a", "a", "b"];
-const uniqueList = Array.from(new Set(list));
-assert.deepEqual(uniqueList, ["a", "b"]);
+describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite", () => {
+  it("1. canonicalizeUrl strips UTM/tracking params and normalizes hostname", () => {
+    const cleaned = canonicalizeUrl(
+      "https://www.DanosLawFirm.com/contact/?utm_source=linkedin&fbclid=abc123&ref= jobboard"
+    );
+    assert.equal(cleaned, "https://danoslawfirm.com/contact");
+  });
 
-// Test Seniority and Regional Gates
-const gateSeniority = (role, seniority) => seniority === "Senior" || role.toLowerCase().includes("senior");
-assert.equal(gateSeniority("Senior Developer", "Mid"), true);
-assert.equal(gateSeniority("Junior Developer", "Junior"), false);
+  it("2. computeFingerprint generates deterministic category::org::title keys", () => {
+    const fp1 = computeFingerprint({
+      category: "remote_jobs",
+      organization: "Lago",
+      title: "Frontend React Developer (Remote)"
+    });
+    const fp2 = computeFingerprint({
+      category: "remote_jobs",
+      organization: "Lago!",
+      title: "Frontend React Developer"
+    });
+    assert.equal(fp1, fp2);
+  });
 
-// Test UNKNOWN Defaults
-const getField = (val) => val || "UNKNOWN";
-assert.equal(getField(null), "UNKNOWN");
-assert.equal(getField(""), "UNKNOWN");
-assert.equal(getField("Engineering"), "Engineering");
+  it("3. deduplicateOpportunities merges duplicate listings and preserves all provenance URLs", () => {
+    const { deduplicated, mergedCount } = deduplicateOpportunities([
+      {
+        id: "OPP-RM-002",
+        category: "remote_jobs",
+        organization: "Lago",
+        title: "Frontend React / Shopify Hydrogen Developer",
+        source_url: "https://apply.workable.com/lago-1/j/A99E34437C/"
+      },
+      {
+        id: "OPP-RM-002-DUP",
+        category: "remote_jobs",
+        organization: "Lago",
+        title: "Frontend React / Shopify Hydrogen Developer (EU)",
+        source_url: "https://apply.workable.com/lago-1/j/D943CC3739/"
+      }
+    ]);
+    assert.equal(deduplicated.length, 1);
+    assert.equal(mergedCount, 1);
+    assert.equal(deduplicated[0].provenance_urls.length, 2);
+  });
 
-// Test Google Sheets user-field preservation
-const existingRow = { id: 1, userNotes: "Followed up on Monday", status: "In Progress" };
-const incomingData = { id: 1, status: "Updated" };
-const merged = { ...incomingData, userNotes: existingRow.userNotes || "UNKNOWN" };
-assert.equal(merged.userNotes, "Followed up on Monday");
+  it("4. calculateExplainableScore enforces Regional Restriction Gate on non-Cyprus remote roles", () => {
+    const africaOnly = seedData.opportunities.find((o) => o.id === "OPP-RM-005");
+    const evaluated = calculateExplainableScore(africaOnly);
+    assert.equal(evaluated.is_active, false);
+    assert.equal(evaluated.eligibility_status, "NO");
+    assert.equal(evaluated.gate_reason, "REGIONAL_RESTRICTION_GATE_NON_CYPRUS");
+  });
 
-console.log("All opportunity_os assertions passed successfully!");
+  it("5. calculateExplainableScore enforces Seniority Gate on 5+ year Senior roles", () => {
+    const seniorRole = seedData.opportunities.find((o) => o.id === "OPP-VJ-006");
+    const evaluated = calculateExplainableScore(seniorRole);
+    assert.equal(evaluated.is_active, false);
+    assert.equal(evaluated.gate_reason, "SENIORITY_GATE_5_PLUS_YEARS");
+  });
+
+  it("6. calculateExplainableScore preserves UNKNOWN legal/eligibility state when profile is unconfirmed", () => {
+    const ediss = seedData.opportunities.find((o) => o.id === "OPP-MS-002");
+    const evaluated = calculateExplainableScore(ediss, {});
+    assert.equal(evaluated.profile_legal_state.citizenship, "UNKNOWN");
+    assert.equal(evaluated.profile_legal_state.eu_eea_status, "UNKNOWN");
+    assert.equal(evaluated.eligibility_status, "UNKNOWN");
+  });
+
+  it("7. buildTodayPriorityQueue ranks active opportunities and excludes gated/archived records", () => {
+    const queue = buildTodayPriorityQueue(seedData.opportunities, "2026-10-14");
+    assert.equal(queue.length, 21);
+    assert.ok(queue[0].queue_priority_score >= queue[queue.length - 1].queue_priority_score);
+    assert.ok(!queue.some((o) => o.id === "OPP-VJ-006" || o.id === "OPP-RM-005" || o.id === "OPP-RM-006"));
+  });
+
+  it("8. classifyFollowUpBucket and bucketFollowUps group dates into exact relative buckets", () => {
+    assert.equal(classifyFollowUpBucket("2026-10-12", "2026-10-14"), "Overdue");
+    assert.equal(classifyFollowUpBucket("2026-10-14", "2026-10-14"), "Due today");
+    assert.equal(classifyFollowUpBucket("2026-10-15", "2026-10-14"), "Tomorrow");
+    assert.equal(classifyFollowUpBucket("2026-10-19", "2026-10-14"), "This week");
+    assert.equal(classifyFollowUpBucket("2026-11-01", "2026-10-14"), "Later");
+    assert.equal(classifyFollowUpBucket(null, "2026-10-14"), "No follow-up");
+
+    const buckets = bucketFollowUps(seedData.opportunities, "2026-10-14");
+    assert.ok(Array.isArray(buckets["Due today"]));
+  });
+
+  it("9. syncDatabaseToSheetRows preserves all user-owned [USER] CRM fields during machine refresh", () => {
+    const existingRows = [
+      {
+        record_id: "OPP-VJ-001",
+        title: "Old Title",
+        score_total: 80,
+        status: "Applied",
+        user_status: "Applied",
+        priority: "High",
+        favorite: true,
+        follow_up_date: "2026-10-18",
+        contacted_date: "2026-10-12",
+        applied_date: "2026-10-14",
+        contacted_at: "2026-10-12",
+        applied_at: "2026-10-14",
+        personal_notes: "Submitted tailored React/WordPress CV"
+      }
+    ];
+    const incomingMachine = [
+      {
+        id: "OPP-VJ-001",
+        title: "Full Stack Websites Developer",
+        score_total: 88,
+        last_verified_at: "2026-10-14"
+      }
+    ];
+    const synced = syncDatabaseToSheetRows(existingRows, incomingMachine);
+    assert.equal(synced.updated, 1);
+    assert.equal(synced.rows[0].title, "Full Stack Websites Developer");
+    assert.equal(synced.rows[0].score_total, 88);
+    assert.equal(synced.rows[0].status, "Applied");
+    assert.equal(synced.rows[0].user_status, "Applied");
+    assert.equal(synced.rows[0].priority, "High");
+    assert.equal(synced.rows[0].favorite, true);
+    assert.equal(synced.rows[0].follow_up_date, "2026-10-18");
+    assert.equal(synced.rows[0].contacted_date, "2026-10-12");
+    assert.equal(synced.rows[0].applied_date, "2026-10-14");
+    assert.equal(synced.rows[0].contacted_at, "2026-10-12");
+    assert.equal(synced.rows[0].applied_at, "2026-10-14");
+    assert.equal(synced.rows[0].personal_notes, "Submitted tailored React/WordPress CV");
+  });
+
+  it("10. applyWorkflowTransition stamps contacted_date/applied_date and appends activity history", () => {
+    const fl1 = JSON.parse(
+      JSON.stringify(seedData.opportunities.find((o) => o.id === "OPP-FL-001"))
+    );
+    const afterContact = applyWorkflowTransition(
+      fl1,
+      {
+        status: "Contacted",
+        priority: "High",
+        favorite: true,
+        follow_up_date: "2026-10-15",
+        personal_notes: "Sent legal booking case study to Andreas G. Danos & Co LLC"
+      },
+      "2026-10-14"
+    );
+    assert.equal(afterContact.workflow.status, "Contacted");
+    assert.equal(afterContact.workflow.contacted_date, "2026-10-14");
+    assert.equal(afterContact.workflow.contacted_at, "2026-10-14");
+    assert.equal(afterContact.workflow.follow_up_date, "2026-10-15");
+    assert.ok(afterContact.activity_history.some((ev) => ev.label.includes("Status updated")));
+  });
+
+  it("11. production dataset contains 24 verified real opportunities and zero fake mock records", () => {
+    assert.equal(seedData.opportunities.length, 24);
+    const serialized = JSON.stringify(seedData.opportunities);
+    for (const fakeName of ["Tech Corp", "StartupX", "Data Inc", "Tech University", "CloudWorks"]) {
+      assert.ok(!serialized.includes(fakeName), `Forbidden mock entity found: ${fakeName}`);
+    }
+  });
+
+  it("12. stored score_components sum accurately to pre-gate score across all active records", () => {
+    const active = seedData.opportunities.filter((o) => o.is_active !== false);
+    assert.equal(active.length, 21);
+    for (const rec of active) {
+      const comps = normalizeScoreComponents(rec);
+      const sum = comps.reduce((acc, c) => acc + Number(c.points), 0);
+      assert.equal(sum, rec.score_total, `Score component sum mismatch on ${rec.id}`);
+    }
+  });
+
+  it("13. canonical workflow statuses enforce exact 15 canonical values with zero legacy mismatches", () => {
+    const expected = [
+      "New",
+      "Reviewing",
+      "High Priority",
+      "Saved",
+      "Contacted",
+      "Preparing",
+      "Applied",
+      "Interview",
+      "Follow-up",
+      "Won",
+      "Offer",
+      "Rejected",
+      "Not Suitable",
+      "Expired",
+      "Archived"
+    ];
+    assert.deepEqual(CANONICAL_WORKFLOW_STATUSES, expected);
+    assert.equal(normalizeWorkflowStatus("Review"), "Reviewing");
+    assert.equal(normalizeWorkflowStatus("Follow-Up"), "Follow-up");
+    assert.equal(normalizeWorkflowStatus("Follow Up"), "Follow-up");
+    assert.equal(normalizeWorkflowStatus("Interviewing"), "Interview");
+    assert.equal(normalizeWorkflowStatus("Not suitable"), "Not Suitable");
+
+    for (const rec of seedData.opportunities) {
+      assert.ok(
+        CANONICAL_WORKFLOW_STATUSES.includes(rec.status),
+        `Non-canonical status on ${rec.id}: ${rec.status}`
+      );
+      assert.equal(rec.status, rec.workflow.status);
+    }
+  });
+});
