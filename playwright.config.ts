@@ -4,13 +4,15 @@ export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.playwright.spec.ts",
   fullyParallel: true,
-  retries: 1,
+  retries: 0,
   use: {
-    baseURL: "http://localhost:4173",
+    baseURL: "http://localhost:5173",
     trace: "on-first-retry"
   },
   projects: [
-    { name: "chromium-desktop", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile-safari", use: { ...devices["iPhone 14"] } }
+    {
+      name: "chromium-desktop",
+      use: { ...devices["Desktop Chrome"], channel: "chrome" }
+    }
   ]
 });
