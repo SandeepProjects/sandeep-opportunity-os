@@ -25,7 +25,7 @@ export function canonicalizeUrl(rawUrl) {
     parsed.hostname = parsed.hostname.toLowerCase().replace(/^www\./, "");
     const stripParams = [
       "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-      "fbclid", "gclid", "mc_cid", "mc_eid", "ref", "source"
+      "fbclid", "gclid", "mc_cid", "mc_eid", "ref", "source", "igsh", "igshid", "mibextid", "rdid"
     ];
     for (const p of stripParams) {
       parsed.searchParams.delete(p);

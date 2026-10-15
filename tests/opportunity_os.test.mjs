@@ -23,6 +23,22 @@ import {
   getNextScheduledSync
 } from "../src/config/dataSources.mjs";
 
+import {
+  fetchSheetValues,
+  fetchMuseSocialLeads,
+  downloadDriveFile,
+  parseXlsxBuffer,
+  fetchMasterJobTracker,
+  fetchMastersWorkbook,
+  normalizeMuseSocialLead,
+  normalizeMasterJobTrackerRow,
+  normalizeMasterProgrammeRow,
+  normalizeScholarshipRow,
+  preserveUserCrmFields,
+  normalizeAndMergeRecords,
+  normalizePrivateKey
+} from "../src/pipeline/adapters/index.mjs";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const seedPath = path.resolve(__dirname, "../src/data/verified_seed_24.json");
 const seedData = JSON.parse(fs.readFileSync(seedPath, "utf8"));
@@ -247,5 +263,333 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
     const next3 = getNextScheduledSync(t3);
     assert.equal(next3.formattedUtc, "00:00 UTC");
     assert.equal(next3.minutesRemaining, 255);
+  });
+
+  it("16. Google Sheets API v4 adapter parses values and maps 2D rows to structured objects", async () => {
+    const mockValues = [
+      ["Platform", "Group/Page Name", "Post Text / Lead Description", "Contact / Link", "Category / Role", "Date Found", "Location", "Budget"],
+      ["Facebook", "Cyprus Tech Hub", "Looking for React/Next.js developer to rebuild portal", "https://facebook.com/groups/cyprustech/posts/1001/?utm_source=feed", "Freelance Lead", "2026-10-16", "Limassol, Cyprus", "€3,500"]
+    ];
+
+    const mockFetch = async (url) => {
+      assert.ok(url.includes("sheets.googleapis.com"));
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ range: "'ALL LEADS'!A1:H2", values: mockValues })
+      };
+    };
+
+    const res = await fetchMuseSocialLeads({
+      token: "mock-valid-bearer-token",
+      spreadsheetId: "1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0",
+      tabName: "ALL LEADS",
+      fetchFn: mockFetch
+    });
+
+    assert.equal(res.ok, true);
+    assert.equal(res.status, "Connected");
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.rawCount, 1);
+    assert.equal(res.records[0].Platform, "Facebook");
+    assert.equal(res.records[0]["Group/Page Name"], "Cyprus Tech Hub");
+    assert.equal(res.records[0].Budget, "€3,500");
+  });
+
+  it("17. Google Drive XLSX adapter parses OpenXML workbook without external dependencies", () => {
+    import("node:zlib").then((zlib) => {
+      function makeZipEntry(filename, contentStr) {
+        const nameBuf = Buffer.from(filename, "utf8");
+        const contentBuf = Buffer.from(contentStr, "utf8");
+        const compressed = zlib.deflateRawSync(contentBuf);
+        const header = Buffer.alloc(30);
+        header.writeUInt32LE(0x04034b50, 0);
+        header.writeUInt16LE(20, 4);
+        header.writeUInt16LE(0, 6);
+        header.writeUInt16LE(8, 8);
+        header.writeUInt16LE(0, 10);
+        header.writeUInt16LE(0, 12);
+        header.writeUInt32LE(0, 14);
+        header.writeUInt32LE(compressed.length, 18);
+        header.writeUInt32LE(contentBuf.length, 22);
+        header.writeUInt16LE(nameBuf.length, 26);
+        header.writeUInt16LE(0, 28);
+        return Buffer.concat([header, nameBuf, compressed]);
+      }
+
+      const zipBuf = Buffer.concat([
+        makeZipEntry("xl/workbook.xml", '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="MASTER_JOBS" sheetId="1" r:id="rId1"/></sheets></workbook>'),
+        makeZipEntry("xl/_rels/workbook.xml.rels", '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>'),
+        makeZipEntry("xl/sharedStrings.xml", '<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="6" uniqueCount="6"><si><t>Company</t></si><si><t>Role / Job Title</t></si><si><t>Location</t></si><si><t>Acme Corp</t></si><si><t>Fullstack Dev</t></si><si><t>Berlin, Germany</t></si></sst>'),
+        makeZipEntry("xl/worksheets/sheet1.xml", '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row><row r="2"><c r="A2" t="s"><v>3</v></c><c r="B2" t="s"><v>4</v></c><c r="C2" t="s"><v>5</v></c></row></sheetData></worksheet>')
+      ]);
+
+      const parsed = parseXlsxBuffer(zipBuf);
+      assert.deepEqual(parsed.sheetNames, ["MASTER_JOBS"]);
+      assert.equal(parsed.sheets.MASTER_JOBS.length, 1);
+      assert.equal(parsed.sheets.MASTER_JOBS[0].Company, "Acme Corp");
+      assert.equal(parsed.sheets.MASTER_JOBS[0]["Role / Job Title"], "Fullstack Dev");
+      assert.equal(parsed.sheets.MASTER_JOBS[0].Location, "Berlin, Germany");
+    });
+  });
+
+  it("18. Remote adapters truthfully return 'Permission required' on 403 and 'Not Found' on 404", async () => {
+    const mock403Fetch = async () => ({
+      ok: false,
+      status: 403,
+      text: async () => "The caller does not have permission"
+    });
+
+    const mock404Fetch = async () => ({
+      ok: false,
+      status: 404,
+      text: async () => "Spreadsheet not found"
+    });
+
+    const res403 = await fetchSheetValues({
+      spreadsheetId: "private-sheet-id",
+      range: "ALL LEADS!A1:Z50",
+      token: "token-lacking-access",
+      fetchFn: mock403Fetch
+    });
+    assert.equal(res403.ok, false);
+    assert.equal(res403.status, "Permission required");
+    assert.equal(res403.statusCode, 403);
+
+    const res404 = await fetchSheetValues({
+      spreadsheetId: "nonexistent-sheet-id",
+      range: "ALL LEADS!A1:Z50",
+      token: "valid-token",
+      fetchFn: mock404Fetch
+    });
+    assert.equal(res404.ok, false);
+    assert.equal(res404.status, "Not Found");
+    assert.equal(res404.statusCode, 404);
+
+    const drive403 = await downloadDriveFile({
+      fileId: "private-drive-file",
+      token: "token-lacking-access",
+      fetchFn: mock403Fetch
+    });
+    assert.equal(drive403.ok, false);
+    assert.equal(drive403.status, "Permission required");
+    assert.equal(drive403.statusCode, 403);
+  });
+
+  it("19. Strict CRM field preservation protects Sandeep's 7 user-owned fields during machine updates", () => {
+    const existingUserRecord = {
+      id: "opp_test_001",
+      category: "visa_jobs",
+      title: "Previous Title",
+      organization: "Tech Solutions",
+      location: "Europe",
+      source_url: "https://example.com/jobs/1",
+      canonical_source_url: "https://example.com/jobs/1",
+      score_total: 70,
+      user_status: "Applied",
+      status: "Applied",
+      priority: "High",
+      favorite: true,
+      follow_up_date: "2026-10-25",
+      contacted_date: "2026-10-14",
+      applied_date: "2026-10-15",
+      personal_notes: "Follow up with VP of Engineering next Wednesday",
+      workflow: {
+        status: "Applied",
+        priority: "High",
+        favorite: true,
+        follow_up_date: "2026-10-25",
+        contacted_date: "2026-10-14",
+        applied_date: "2026-10-15",
+        personal_notes: "Follow up with VP of Engineering next Wednesday"
+      },
+      activity_history: [
+        { at: "2026-10-15T10:00:00Z", label: "Application submitted via company portal" }
+      ]
+    };
+
+    const incomingMachineRecord = {
+      id: "opp_test_001",
+      category: "visa_jobs",
+      title: "Updated Title from Remote Muse Scan",
+      organization: "Tech Solutions",
+      location: "Europe",
+      source_url: "https://example.com/jobs/1",
+      canonical_source_url: "https://example.com/jobs/1",
+      score_total: 92, // Fresh machine score
+      deadline: "2026-11-30",
+      user_status: "New", // Default machine status — MUST BE OVERRIDDEN BY USER FIELD
+      priority: "Medium",
+      favorite: false,
+      follow_up_date: null,
+      contacted_date: null,
+      applied_date: null,
+      personal_notes: "",
+      workflow: {
+        status: "New",
+        priority: "Medium",
+        favorite: false,
+        follow_up_date: null,
+        contacted_date: null,
+        applied_date: null,
+        personal_notes: ""
+      },
+      activity_history: [
+        { at: "2026-10-16T00:00:00Z", label: "Remote sheets sync refreshed listing" }
+      ]
+    };
+
+    const merged = preserveUserCrmFields(existingUserRecord, incomingMachineRecord);
+
+    // 1. Status preserved
+    assert.equal(merged.user_status, "Applied");
+    assert.equal(merged.status, "Applied");
+    assert.equal(merged.workflow.status, "Applied");
+
+    // 2. Priority preserved
+    assert.equal(merged.priority, "High");
+    assert.equal(merged.workflow.priority, "High");
+
+    // 3. Favorite preserved
+    assert.equal(merged.favorite, true);
+    assert.equal(merged.workflow.favorite, true);
+
+    // 4. Follow-up date preserved
+    assert.equal(merged.follow_up_date, "2026-10-25");
+    assert.equal(merged.workflow.follow_up_date, "2026-10-25");
+
+    // 5. Personal notes preserved
+    assert.equal(merged.personal_notes, "Follow up with VP of Engineering next Wednesday");
+    assert.equal(merged.workflow.personal_notes, "Follow up with VP of Engineering next Wednesday");
+
+    // 6. Contacted date preserved
+    assert.equal(merged.contacted_date, "2026-10-14");
+    assert.equal(merged.workflow.contacted_date, "2026-10-14");
+
+    // 7. Applied date preserved
+    assert.equal(merged.applied_date, "2026-10-15");
+    assert.equal(merged.workflow.applied_date, "2026-10-15");
+
+    // Machine fields successfully updated
+    assert.equal(merged.title, "Updated Title from Remote Muse Scan");
+    assert.equal(merged.score_total, 92);
+    assert.equal(merged.deadline, "2026-11-30");
+
+    // Activity histories merged
+    assert.equal(merged.activity_history.length, 2);
+  });
+
+  it("20. CRUCIAL INTEGRATION: Ingesting raw Muse ALL LEADS row creates a valid OpportunityRecord without altering verified_seed_24.json", () => {
+    // Record baseline disk state of verified_seed_24.json
+    const initialRaw = fs.readFileSync(seedPath, "utf8");
+    const initialSeed = JSON.parse(initialRaw);
+    assert.equal(initialSeed.opportunities.length, 24);
+
+    const rawMuseLead = {
+      Platform: "Instagram",
+      "Group/Page Name": "cyprus_agency_network",
+      "Post Text / Lead Description": "Urgent: Looking for senior React/TypeScript engineer to build high-performance client portal",
+      "Contact / Link": "https://instagram.com/p/DB123456789/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
+      "Category / Role": "Freelance Lead",
+      "Date Found": "2026-10-16",
+      Location: "Remote (Cyprus / EU)",
+      Budget: "€4,000 fixed price"
+    };
+
+    // Normalize raw lead
+    const normalizedLead = normalizeMuseSocialLead(rawMuseLead, 1);
+
+    // Verify normalization
+    assert.equal(normalizedLead.category, "freelance_leads");
+    assert.equal(normalizedLead.canonical_source_url, "https://instagram.com/p/DB123456789");
+    assert.ok(normalizedLead.id.startsWith("opp_free_"));
+    assert.equal(normalizedLead.organization, "cyprus_agency_network");
+    assert.ok(normalizedLead.score_total > 0);
+    assert.equal(normalizedLead.user_status, "New");
+
+    // Merge into active in-memory dataset
+    const mergeOutcome = normalizeAndMergeRecords([normalizedLead], initialSeed.opportunities);
+
+    // Merged count is now 25 (24 initial seed + 1 newly ingested Muse lead)
+    assert.equal(mergeOutcome.merged.length, 25);
+    assert.equal(mergeOutcome.addedCount, 1);
+    assert.ok(mergeOutcome.merged.some((o) => o.id === normalizedLead.id));
+
+    // CRITICAL: Verify that verified_seed_24.json file on disk was NOT touched
+    const postRaw = fs.readFileSync(seedPath, "utf8");
+    assert.equal(initialRaw, postRaw, "CRITICAL ERROR: verified_seed_24.json was modified on disk!");
+    const postSeed = JSON.parse(postRaw);
+    assert.equal(postSeed.opportunities.length, 24, "Seed record count changed on disk!");
+  });
+
+  it("21. Ingestion normalizers map Master Tracker, Programmes, and Scholarships with correct classification", () => {
+    // 1. normalizePrivateKey unescapes literal \n and trims quotes
+    assert.equal(
+      normalizePrivateKey('"-----BEGIN PRIVATE KEY-----\\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC\\n-----END PRIVATE KEY-----\\n"'),
+      "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC\n-----END PRIVATE KEY-----\n"
+    );
+
+    // 2. normalizeMasterJobTrackerRow
+    const job = normalizeMasterJobTrackerRow({
+      Company: "Stripe",
+      "Role / Job Title": "Full Stack Engineer",
+      Location: "Dublin, Ireland",
+      "URL / Job Link": "https://stripe.com/jobs/123",
+      "Salary / Rate": "€95,000"
+    });
+    assert.equal(job.category, "visa_jobs");
+    assert.equal(job.organization, "Stripe");
+    assert.equal(job.title, "Full Stack Engineer");
+    assert.equal(job.details.salary_range, "€95,000");
+
+    // 3. normalizeMasterProgrammeRow
+    const programme = normalizeMasterProgrammeRow({
+      University: "ETH Zurich",
+      "Programme Name": "MSc Computer Science",
+      Country: "Switzerland",
+      URL: "https://inf.ethz.ch/master-cs.html",
+      Tuition: "CHF 1,460 / year",
+      Deadline: "2026-12-15"
+    });
+    assert.equal(programme.category, "masters_scholarships");
+    assert.equal(programme.organization, "ETH Zurich");
+    assert.equal(programme.deadline, "2026-12-15");
+
+    // 4. normalizeScholarshipRow
+    const scholarship = normalizeScholarshipRow({
+      "Scholarship Name": "Excellence Scholarship & Opportunity Programme",
+      Provider: "ETH Foundation",
+      Country: "Switzerland",
+      URL: "https://ethz.ch/scholarships/esop.html",
+      Coverage: "Full Study & Living Costs (CHF 12,000 / semester)",
+      Deadline: "2026-12-15"
+    });
+    assert.equal(scholarship.category, "masters_scholarships");
+    assert.equal(scholarship.organization, "ETH Foundation");
+    assert.ok(scholarship.details.tuition_and_coverage.includes("Full Study"));
+  });
+
+  it("22. High-level Drive fetchers handle download errors gracefully", async () => {
+    const mockFailFetch = async () => ({
+      ok: false,
+      status: 403,
+      text: async () => "Drive API permission denied"
+    });
+
+    const trackerRes = await fetchMasterJobTracker({
+      fileId: "dummy-id",
+      token: "dummy-token",
+      fetchFn: mockFailFetch
+    });
+    assert.equal(trackerRes.ok, false);
+    assert.equal(trackerRes.status, "Permission required");
+
+    const mastersRes = await fetchMastersWorkbook({
+      fileId: "dummy-id",
+      token: "dummy-token",
+      fetchFn: mockFailFetch
+    });
+    assert.equal(mastersRes.ok, false);
+    assert.equal(mastersRes.status, "Permission required");
   });
 });

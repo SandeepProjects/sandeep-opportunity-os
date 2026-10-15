@@ -137,9 +137,24 @@ export async function performOpportunitySync(
   }
   savePersistedCrmMap(map);
 
+  let activeRecords = records;
+  if (isSupabaseConfigured && supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient
+        .from("opportunities")
+        .select("*, workflow_states(*)")
+        .order("score_total", { ascending: false });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        activeRecords = data as unknown as OpportunityRecord[];
+      }
+    } catch {
+      // Continue with returned records
+    }
+  }
+
   const state: RepositoryState = {
     mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
-    opportunities: records,
+    opportunities: activeRecords,
     profile:
       candidateProfile ||
       loadPersistedProfile(verifiedSeed.candidate_profile as unknown as CandidateProfile),
