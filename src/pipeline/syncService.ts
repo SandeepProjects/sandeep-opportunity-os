@@ -10,7 +10,8 @@
  * - Truthful Diagnostics: Reports actual HTTP responses from remote sources.
  */
 
-import verifiedSeed from "../data/verified_seed_24.json";
+import { supabaseUrl, supabaseAnonKey } from "../lib/supabase/client.ts";
+import verifiedSeed from "../data/verified_seed_24.json" with { type: "json" };
 import {
   canonicalizeUrl,
   deduplicateOpportunities,
@@ -72,43 +73,50 @@ export async function executeSyncPipeline(
   const startTime = startedAt.getTime();
   const runId = `SYNC-${startedAt.toISOString().slice(0, 10).replace(/-/g, "")}-${startedAt.getTime().toString().slice(-4)}`;
 
-  // 1. Attempt genuine server-side sync via /api/sync endpoint
+  // 1. Attempt genuine server-side sync via production Supabase Edge Function or local /api/sync
   if (typeof window !== "undefined" && typeof window.fetch === "function") {
-    try {
-      const response = await window.fetch("/api/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentCount: currentRecords.length,
-          profile: candidateProfile
-        })
-      });
+    const edgeFunctionEndpoint = `${supabaseUrl}/functions/v1/sync-opportunity-data`;
+    const endpointsToTry: Array<{ url: string; headers: Record<string, string> }> = [
+      { url: edgeFunctionEndpoint, headers: { "Content-Type": "application/json", apikey: supabaseAnonKey } },
+      { url: "/api/sync", headers: { "Content-Type": "application/json" } }
+    ];
 
-      if (response.ok) {
-        const serverTelemetry = (await response.json()) as SyncTelemetry & {
-          records?: OpportunityRecord[];
-        };
+    for (const ep of endpointsToTry) {
+      try {
+        const response = await window.fetch(ep.url, {
+          method: "POST",
+          headers: ep.headers,
+          body: JSON.stringify({
+            currentCount: currentRecords.length,
+            profile: candidateProfile
+          })
+        });
 
-        const updatedRecords =
-          Array.isArray(serverTelemetry.records) && serverTelemetry.records.length > 0
-            ? serverTelemetry.records
-            : currentRecords;
+        if (response.ok) {
+          const serverTelemetry = (await response.json()) as SyncTelemetry & {
+            records?: OpportunityRecord[];
+          };
 
-        // Persist telemetry in localStorage
-        try {
-          window.localStorage.setItem(TELEMETRY_STORAGE_KEY, JSON.stringify(serverTelemetry));
-        } catch {
-          // LocalStorage quota/private mode
+          const updatedRecords =
+            Array.isArray(serverTelemetry.records) && serverTelemetry.records.length > 0
+              ? serverTelemetry.records
+              : currentRecords;
+
+          // Persist telemetry in localStorage
+          try {
+            window.localStorage.setItem(TELEMETRY_STORAGE_KEY, JSON.stringify(serverTelemetry));
+          } catch {
+            // LocalStorage quota/private mode
+          }
+
+          return {
+            records: updatedRecords,
+            telemetry: serverTelemetry
+          };
         }
-
-        return {
-          records: updatedRecords,
-          telemetry: serverTelemetry
-        };
+      } catch {
+        // Fall through to next endpoint or truthful local fallback
       }
-    } catch {
-      // Endpoint unreachable (e.g. static hosting or test environment).
-      // Fall through to truthful local diagnostic mode below.
     }
   }
 

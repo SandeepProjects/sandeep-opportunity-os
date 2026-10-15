@@ -89,13 +89,15 @@ export function normalizeMuseSocialLead(row, index = 0) {
   }
 
   const categoryHint = getFirstVal(row, ["Category / Role", "Category", "Role Type", "Pipeline"]).toLowerCase();
-  let category = "social_jobs";
-  if (categoryHint.includes("freelance") || categoryHint.includes("contract") || categoryHint.includes("project")) {
-    category = "freelance_leads";
-  } else if (categoryHint.includes("remote")) {
+  let category = "freelance_leads";
+  if (categoryHint.includes("remote")) {
     category = "remote_jobs";
-  } else if (categoryHint.includes("visa") || categoryHint.includes("sponsor")) {
+  } else if (categoryHint.includes("visa") || categoryHint.includes("sponsor") || categoryHint.includes("full-time")) {
     category = "visa_jobs";
+  } else if (categoryHint.includes("master") || categoryHint.includes("scholarship")) {
+    category = "masters_scholarships";
+  } else {
+    category = "freelance_leads";
   }
 
   const location = getFirstVal(row, ["Location", "Country", "City", "Geography"]) || "Remote / Worldwide";

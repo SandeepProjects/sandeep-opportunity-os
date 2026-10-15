@@ -83,10 +83,31 @@ export async function runServerSync(options = {}) {
       if (dbRes.ok) {
         const dbData = await dbRes.json();
         if (Array.isArray(dbData) && dbData.length > 0) {
-          existingRecords = dbData.map((d) => ({
-            ...d,
-            workflow: Array.isArray(d.workflow_states) && d.workflow_states[0] ? d.workflow_states[0] : d.workflow
-          }));
+          const dbMap = new Map(dbData.map((d) => [d.id, d]));
+          const baseRecords = seed.opportunities || [];
+          const combined = baseRecords.map((s) => {
+            const dbMatch = dbMap.get(s.id);
+            if (dbMatch) {
+              dbMap.delete(s.id);
+              return {
+                ...s,
+                ...dbMatch,
+                workflow: Array.isArray(dbMatch.workflow_states) && dbMatch.workflow_states[0]
+                  ? dbMatch.workflow_states[0]
+                  : dbMatch.workflow || s.workflow
+              };
+            }
+            return s;
+          });
+          for (const remaining of dbMap.values()) {
+            combined.push({
+              ...remaining,
+              workflow: Array.isArray(remaining.workflow_states) && remaining.workflow_states[0]
+                ? remaining.workflow_states[0]
+                : remaining.workflow
+            });
+          }
+          existingRecords = combined;
         }
       }
     } catch (err) {
@@ -292,16 +313,21 @@ export async function runServerSync(options = {}) {
         id: o.id,
         category: o.category,
         title: o.title,
-        organization_name: o.organization,
+        organization: o.organization,
         location: o.location,
+        country: o.country || "Global / Cyprus",
         source_url: o.source_url,
+        source_type: o.source_type || "INGESTION_SCAN",
         last_verified_at: o.last_verified_at,
-        deadline: o.deadline,
+        deadline: o.deadline || null,
         is_active: o.is_active,
-        confidence: o.confidence,
+        confidence: String(o.confidence || "MEDIUM").toUpperCase(),
         score_total: o.score_total,
-        score_components_json: o.score_components,
-        details_json: o.details
+        score_components: o.score_components,
+        score_explanation: o.score_explanation || [],
+        details: o.details,
+        provenance_urls: o.provenance_urls || [o.source_url],
+        fingerprint: o.fingerprint || null
       }));
 
       const res = await fetchFn(`${supabaseUrl}/rest/v1/opportunities`, {
@@ -315,12 +341,37 @@ export async function runServerSync(options = {}) {
         body: JSON.stringify(oppPayload)
       });
 
+      // Upsert workflow states for preserved user CRM integrity
+      const workflowPayload = mergeResult.merged.map((o) => ({
+        opportunity_id: o.id,
+        status: o.workflow?.status || o.user_status || "New",
+        priority: o.workflow?.priority || o.priority || "P2",
+        favorite: o.workflow?.favorite ?? o.favorite ?? false,
+        follow_up_date: o.workflow?.follow_up_date || o.follow_up_date || null,
+        contacted_date: o.workflow?.contacted_date || o.contacted_date || null,
+        applied_date: o.workflow?.applied_date || o.applied_date || null,
+        personal_notes: o.workflow?.personal_notes || o.personal_notes || ""
+      }));
+
+      await fetchFn(`${supabaseUrl}/rest/v1/workflow_states`, {
+        method: "POST",
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates"
+        },
+        body: JSON.stringify(workflowPayload)
+      }).catch(() => {});
+
       if (res.ok) {
         supabaseSynced = true;
         supabaseMessage = `Successfully synced ${oppPayload.length} opportunities to Supabase.`;
+        console.log(`[Opportunity OS Sync] ${supabaseMessage}`);
       } else {
         const errText = await res.text().catch(() => "");
         supabaseMessage = `Supabase opportunities upsert error HTTP ${res.status}: ${errText}`;
+        console.warn(`[Opportunity OS Sync] ${supabaseMessage}`);
       }
 
       // Log telemetry run in research_runs table

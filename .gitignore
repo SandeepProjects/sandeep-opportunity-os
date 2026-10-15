@@ -8,5 +8,8 @@ blob-report/
 .env.*.local
 *.pem
 *.key
+*.key.json
 *.db
 .DS_Store
+.secrets/
+supabase/.temp/
