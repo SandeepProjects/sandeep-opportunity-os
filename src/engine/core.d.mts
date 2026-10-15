@@ -1,48 +1,43 @@
-export declare const CANONICAL_WORKFLOW_STATUSES: string[];
-export declare const TERMINAL_WORKFLOW_STATUSES: Set<string>;
-export declare const USER_OWNED_FIELDS: string[];
+import type {
+  CandidateProfile,
+  FollowUpBucket,
+  OpportunityRecord,
+  WorkflowState
+} from "../types/opportunity";
 
-export declare function normalizeWorkflowStatus(rawStatus: string | undefined | null): string;
-export declare function canonicalizeUrl(rawUrl: string): string;
-export declare function computeFingerprint(item: Record<string, unknown>): string;
-export declare function deduplicateOpportunities<T extends Record<string, unknown>>(
-  records: T[]
-): {
-  deduplicated: T[];
+export function canonicalizeUrl(rawUrl: string): string;
+export function computeFingerprint(item: Partial<OpportunityRecord>): string;
+export function deduplicateOpportunities(records: OpportunityRecord[]): {
+  deduplicated: OpportunityRecord[];
   mergedCount: number;
 };
-export declare function calculateExplainableScore(
-  record: Record<string, unknown>,
-  profile?: Record<string, unknown>
+export function calculateExplainableScore(
+  record: OpportunityRecord,
+  profile?: Partial<CandidateProfile>
 ): {
   score_total: number;
   is_active: boolean;
   eligibility_status: string;
   gate_reason: string | null;
-  profile_legal_state: {
-    citizenship: string;
-    eu_eea_status: string;
-    work_permit_status: string;
-  };
 };
-export declare function classifyFollowUpBucket(
+export function classifyFollowUpBucket(
   followUpDate: string | null | undefined,
   referenceDate?: string
-): "Overdue" | "Due today" | "Tomorrow" | "This week" | "Later" | "No follow-up";
-export declare function bucketFollowUps<T extends Record<string, unknown>>(
-  records: T[],
+): FollowUpBucket;
+export function bucketFollowUps(
+  records: OpportunityRecord[],
   referenceDate?: string
-): Record<"Overdue" | "Due today" | "Tomorrow" | "This week" | "Later" | "No follow-up", T[]>;
-export declare function buildTodayPriorityQueue<T extends Record<string, unknown>>(
-  records: T[],
+): Record<FollowUpBucket, OpportunityRecord[]>;
+export function buildTodayPriorityQueue(
+  records: OpportunityRecord[],
   referenceDate?: string
-): T[];
-export declare function applyWorkflowTransition<T extends Record<string, unknown>>(
-  record: T,
-  patch: Record<string, unknown>,
+): OpportunityRecord[];
+export function applyWorkflowTransition(
+  record: OpportunityRecord,
+  patch: Partial<WorkflowState>,
   isoDate?: string
-): T;
-export declare function syncDatabaseToSheetRows(
+): OpportunityRecord;
+export function syncDatabaseToSheetRows(
   existingSheetRows: Record<string, unknown>[],
   incomingMachineRecords: Record<string, unknown>[]
 ): {
@@ -51,12 +46,10 @@ export declare function syncDatabaseToSheetRows(
   updated: number;
   preservedUserFields: number;
 };
-export declare function normalizeScoreComponents(
-  record: Record<string, unknown>
-): {
+export function normalizeScoreComponents(record: OpportunityRecord): Array<{
   key: string;
   label: string;
   points: number;
   max_points: number;
   rationale?: string;
-}[];
+}>;

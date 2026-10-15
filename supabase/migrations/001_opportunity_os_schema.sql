@@ -50,30 +50,10 @@ CREATE INDEX IF NOT EXISTS idx_opportunities_category_score ON public.opportunit
 CREATE TABLE IF NOT EXISTS public.workflow_states (
     opportunity_id TEXT PRIMARY KEY REFERENCES public.opportunities(id) ON DELETE CASCADE,
     owner_id UUID NOT NULL DEFAULT auth.uid(),
-    status TEXT NOT NULL DEFAULT 'New' CHECK (status IN (
-      'New',
-      'Reviewing',
-      'High Priority',
-      'Saved',
-      'Contacted',
-      'Preparing',
-      'Applied',
-      'Interview',
-      'Follow-up',
-      'Won',
-      'Offer',
-      'Rejected',
-      'Not Suitable',
-      'Expired',
-      'Archived'
-    )),
+    status TEXT NOT NULL DEFAULT 'New',
     priority TEXT NOT NULL DEFAULT 'P2',
     favorite BOOLEAN NOT NULL DEFAULT FALSE,
     follow_up_date DATE,
-    contacted_date DATE,
-    applied_date DATE,
-    contacted_at TIMESTAMPTZ,
-    applied_at TIMESTAMPTZ,
     personal_notes TEXT NOT NULL DEFAULT '',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

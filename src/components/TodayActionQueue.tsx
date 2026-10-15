@@ -1,6 +1,5 @@
 import React from "react";
 import type { OpportunityRecord } from "../types/opportunity";
-import { normalizeWorkflowStatus, TERMINAL_WORKFLOW_STATUSES } from "../engine/core";
 
 export interface TodayActionQueueProps {
   opportunities: OpportunityRecord[];
@@ -12,8 +11,8 @@ export const TodayActionQueue: React.FC<TodayActionQueueProps> = ({
   onSelectOpportunity
 }) => {
   const active = opportunities.filter((o) => {
-    const status = normalizeWorkflowStatus(o.workflow?.status || o.user_status || o.status);
-    return o.is_active && !TERMINAL_WORKFLOW_STATUSES.has(status);
+    const status = o.workflow?.status || o.user_status || o.status || "New";
+    return o.is_active && !["Not Suitable", "Rejected", "Expired", "Archived", "Won"].includes(status);
   });
   return (
     <section aria-label="Today Prioritized Action Queue" className="today-queue-grid">

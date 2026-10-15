@@ -10,7 +10,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ["react", "react-dom"],
-          supabase: ["@supabase/supabase-js"]
+          supabase: ["@supabase/supabase-js"],
+          icons: ["lucide-react"]
         }
       }
     }

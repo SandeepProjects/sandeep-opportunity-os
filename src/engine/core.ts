@@ -2,14 +2,9 @@ import type {
   OpportunityRecord,
   CandidateProfile,
   WorkflowState,
-  WorkflowStatus,
   FollowUpBucket
 } from "../types/opportunity";
 import {
-  CANONICAL_WORKFLOW_STATUSES as canonicalStatusesJs,
-  TERMINAL_WORKFLOW_STATUSES as terminalStatusesJs,
-  USER_OWNED_FIELDS as userOwnedFieldsJs,
-  normalizeWorkflowStatus as normalizeWorkflowStatusJs,
   canonicalizeUrl as canonicalizeUrlJs,
   computeFingerprint as computeFingerprintJs,
   deduplicateOpportunities as deduplicateOpportunitiesJs,
@@ -22,28 +17,12 @@ import {
   normalizeScoreComponents as normalizeScoreComponentsJs
 } from "./core.mjs";
 
-export const CANONICAL_WORKFLOW_STATUSES: ReadonlyArray<WorkflowStatus> =
-  canonicalStatusesJs as unknown as ReadonlyArray<WorkflowStatus>;
-export const TERMINAL_WORKFLOW_STATUSES: ReadonlySet<WorkflowStatus> =
-  terminalStatusesJs as unknown as ReadonlySet<WorkflowStatus>;
-export const USER_OWNED_FIELDS: ReadonlyArray<string> = userOwnedFieldsJs;
-
-export const normalizeWorkflowStatus: (
-  rawStatus: string | undefined | null
-) => WorkflowStatus = normalizeWorkflowStatusJs as (
-  rawStatus: string | undefined | null
-) => WorkflowStatus;
-
 export const canonicalizeUrl: (rawUrl: string) => string = canonicalizeUrlJs;
-export const computeFingerprint: (item: Partial<OpportunityRecord>) => string =
-  computeFingerprintJs as (item: Partial<OpportunityRecord>) => string;
+export const computeFingerprint: (item: Partial<OpportunityRecord>) => string = computeFingerprintJs;
 export const deduplicateOpportunities: (records: OpportunityRecord[]) => {
   deduplicated: OpportunityRecord[];
   mergedCount: number;
-} = deduplicateOpportunitiesJs as unknown as (records: OpportunityRecord[]) => {
-  deduplicated: OpportunityRecord[];
-  mergedCount: number;
-};
+} = deduplicateOpportunitiesJs;
 export const calculateExplainableScore: (
   record: OpportunityRecord,
   profile?: Partial<CandidateProfile>
@@ -52,25 +31,7 @@ export const calculateExplainableScore: (
   is_active: boolean;
   eligibility_status: string;
   gate_reason: string | null;
-  profile_legal_state: {
-    citizenship: string;
-    eu_eea_status: string;
-    work_permit_status: string;
-  };
-} = calculateExplainableScoreJs as unknown as (
-  record: OpportunityRecord,
-  profile?: Partial<CandidateProfile>
-) => {
-  score_total: number;
-  is_active: boolean;
-  eligibility_status: string;
-  gate_reason: string | null;
-  profile_legal_state: {
-    citizenship: string;
-    eu_eea_status: string;
-    work_permit_status: string;
-  };
-};
+} = calculateExplainableScoreJs;
 export const classifyFollowUpBucket: (
   followUpDate: string | null | undefined,
   referenceDate?: string
@@ -78,26 +39,16 @@ export const classifyFollowUpBucket: (
 export const bucketFollowUps: (
   records: OpportunityRecord[],
   referenceDate?: string
-) => Record<FollowUpBucket, OpportunityRecord[]> = bucketFollowUpsJs as unknown as (
-  records: OpportunityRecord[],
-  referenceDate?: string
-) => Record<FollowUpBucket, OpportunityRecord[]>;
+) => Record<FollowUpBucket, OpportunityRecord[]> = bucketFollowUpsJs;
 export const buildTodayPriorityQueue: (
   records: OpportunityRecord[],
   referenceDate?: string
-) => OpportunityRecord[] = buildTodayPriorityQueueJs as unknown as (
-  records: OpportunityRecord[],
-  referenceDate?: string
-) => OpportunityRecord[];
+) => OpportunityRecord[] = buildTodayPriorityQueueJs;
 export const applyWorkflowTransition: (
   record: OpportunityRecord,
   patch: Partial<WorkflowState>,
   isoDate?: string
-) => OpportunityRecord = applyWorkflowTransitionJs as unknown as (
-  record: OpportunityRecord,
-  patch: Partial<WorkflowState>,
-  isoDate?: string
-) => OpportunityRecord;
+) => OpportunityRecord = applyWorkflowTransitionJs;
 export const syncDatabaseToSheetRows: (
   existingSheetRows: Record<string, unknown>[],
   incomingMachineRecords: Record<string, unknown>[]
@@ -108,20 +59,4 @@ export const syncDatabaseToSheetRows: (
   preservedUserFields: number;
 } = syncDatabaseToSheetRowsJs;
 
-export const normalizeScoreComponents: (
-  record: OpportunityRecord
-) => {
-  key: string;
-  label: string;
-  points: number;
-  max_points: number;
-  rationale?: string;
-}[] = normalizeScoreComponentsJs as unknown as (
-  record: OpportunityRecord
-) => {
-  key: string;
-  label: string;
-  points: number;
-  max_points: number;
-  rationale?: string;
-}[];
+export const normalizeScoreComponents: (record: OpportunityRecord) => { key: string; label: string; points: number; max_points: number; rationale?: string }[] = normalizeScoreComponentsJs;

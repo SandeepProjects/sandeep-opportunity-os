@@ -3,64 +3,15 @@
  * Used by both the frontend application, the CLI research runner, and automated tests.
  */
 
-export const CANONICAL_WORKFLOW_STATUSES = [
-  "New",
-  "Reviewing",
-  "High Priority",
-  "Saved",
-  "Contacted",
-  "Preparing",
-  "Applied",
-  "Interview",
-  "Follow-up",
-  "Won",
-  "Offer",
-  "Rejected",
-  "Not Suitable",
-  "Expired",
-  "Archived"
-];
-
-export const TERMINAL_WORKFLOW_STATUSES = new Set([
-  "Archived",
-  "Rejected",
-  "Not Suitable",
-  "Expired",
-  "Won",
-  "Offer"
-]);
-
 export const USER_OWNED_FIELDS = [
-  "status",
   "user_status",
   "priority",
   "favorite",
   "follow_up_date",
   "personal_notes",
   "contacted_date",
-  "applied_date",
-  "contacted_at",
-  "applied_at"
+  "applied_date"
 ];
-
-/**
- * Normalizes any status alias into the single canonical WorkflowStatus enum.
- * @param {string | undefined | null} rawStatus
- * @returns {string}
- */
-export function normalizeWorkflowStatus(rawStatus) {
-  if (!rawStatus || typeof rawStatus !== "string") return "New";
-  const trimmed = rawStatus.trim();
-  if (trimmed === "Review" || trimmed.toLowerCase() === "reviewing") return "Reviewing";
-  if (trimmed === "Follow-Up" || trimmed === "Follow Up" || trimmed.toLowerCase() === "follow-up") {
-    return "Follow-up";
-  }
-  if (trimmed === "Interviewing" || trimmed.toLowerCase() === "interview") return "Interview";
-  if (trimmed.toLowerCase() === "not suitable") return "Not Suitable";
-  if (trimmed.toLowerCase() === "high priority") return "High Priority";
-  if (CANONICAL_WORKFLOW_STATUSES.includes(trimmed)) return trimmed;
-  return "New";
-}
 
 /**
  * Strips UTM/tracking parameters, lowercases hostname, and removes trailing slashes.
@@ -127,9 +78,6 @@ export function deduplicateOpportunities(records) {
       mergedCount += 1;
       const urls = new Set(existing.provenance_urls || [existing.source_url]);
       if (raw.source_url) urls.add(raw.source_url);
-      if (Array.isArray(raw.secondary_sources)) {
-        for (const u of raw.secondary_sources) urls.add(u);
-      }
       if (Array.isArray(raw.provenance_urls)) {
         for (const u of raw.provenance_urls) urls.add(u);
       }
@@ -140,13 +88,7 @@ export function deduplicateOpportunities(records) {
         canonical_url: canonUrl,
         fingerprint: fp,
         provenance_urls: Array.from(
-          new Set(
-            [
-              raw.source_url,
-              ...(raw.secondary_sources || []),
-              ...(raw.provenance_urls || [])
-            ].filter(Boolean)
-          )
+          new Set([raw.source_url, ...(raw.provenance_urls || [])].filter(Boolean))
         )
       };
       byFingerprint.set(fp, clone);
@@ -170,41 +112,24 @@ export function deduplicateOpportunities(records) {
 export function calculateExplainableScore(record, profile = {}) {
   const safeProfile = {
     citizenship: profile.citizenship || "UNKNOWN",
-    eu_eea_status: profile.eu_eea_status || profile.eu_citizenship || "UNKNOWN",
-    work_permit_status:
-      profile.work_permit_status || profile.cyprus_full_time_work_rights || "UNKNOWN"
+    eu_eea_status: profile.eu_eea_status || "UNKNOWN",
+    work_permit_status: profile.work_permit_status || "UNKNOWN"
   };
 
   const details = record.details || {};
   const yearsRequired = Number(details.years_required || 0);
-  const expText = String(details.experience_required || "");
-  const seniorityGated =
-    yearsRequired >= 5 ||
-    /\b([5-9]|\d{2,})\+?\s*years/i.test(expText) ||
-    /\b(senior|lead|principal|staff)\b/i.test(String(record.title || ""));
-  const regionRestricted =
-    Boolean(details.region_restricted_out_of_cyprus) ||
+  const seniorityGated = yearsRequired >= 5 || /\b(senior|lead|principal|staff)\b/i.test(String(record.title || ""));
+  const regionRestricted = Boolean(details.region_restricted_out_of_cyprus) ||
     details.region_eligibility === "NO" ||
     details.cyprus_eligibility === "NO" ||
     details.remote_geography_class === "Excluded" ||
-    /\b(us-only|africa-only|united states only|remote from:\s*africa|nigeria|kenya|egypt only)\b/i.test(
-      `${record.title || ""} ${record.location || ""} ${details.remote_boundary || ""} ${details.remote_region_restrictions || ""}`
+    /\b(us-only|africa-only|united states only|nigeria|kenya|egypt only)\b/i.test(
+      `${record.title || ""} ${record.location || ""} ${details.remote_boundary || ""}`
     );
 
   // Never infer legal eligibility if unconfirmed
-  let resolvedEligibility =
-    record.eligibility_status ||
-    details.eligibility_confidence ||
-    details.eligibility_status ||
-    details.visa_status ||
-    details.visa_sponsorship_status ||
-    details.cyprus_eligibility ||
-    "UNKNOWN";
-  if (
-    resolvedEligibility === "CONFIRMED" &&
-    details.requires_eu_citizenship &&
-    safeProfile.eu_eea_status === "UNKNOWN"
-  ) {
+  let resolvedEligibility = record.eligibility_status || details.eligibility_confidence || details.visa_status || "UNKNOWN";
+  if (resolvedEligibility === "CONFIRMED" && details.requires_eu_citizenship && safeProfile.eu_eea_status === "UNKNOWN") {
     resolvedEligibility = "UNKNOWN";
   }
 
@@ -242,13 +167,40 @@ export function calculateExplainableScore(record, profile = {}) {
   };
 }
 
+function getNicosiaParts(date = new Date()) {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Nicosia",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23"
+    })
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+}
+
+function getLocalIsoDate(date = new Date()) {
+  const parts = getNicosiaParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getLocalTimeHHMM(date = new Date()) {
+  const parts = getNicosiaParts(date);
+  return `${parts.hour}:${parts.minute}`;
+}
+
 /**
  * Classifies a follow-up date relative to a reference ISO date (YYYY-MM-DD).
  * @param {string | null | undefined} followUpDate
  * @param {string} referenceDate
  * @returns {"Overdue" | "Due today" | "Tomorrow" | "This week" | "Later" | "No follow-up"}
  */
-export function classifyFollowUpBucket(followUpDate, referenceDate = "2026-10-14") {
+export function classifyFollowUpBucket(followUpDate, referenceDate = getLocalIsoDate()) {
   if (!followUpDate) return "No follow-up";
   const ref = new Date(`${referenceDate}T00:00:00Z`).getTime();
   const target = new Date(`${String(followUpDate).slice(0, 10)}T00:00:00Z`).getTime();
@@ -266,7 +218,7 @@ export function classifyFollowUpBucket(followUpDate, referenceDate = "2026-10-14
  * @param {Array<Object>} records
  * @param {string} referenceDate
  */
-export function bucketFollowUps(records, referenceDate = "2026-10-14") {
+export function bucketFollowUps(records, referenceDate = getLocalIsoDate()) {
   const buckets = {
     "Overdue": [],
     "Due today": [],
@@ -286,23 +238,22 @@ export function bucketFollowUps(records, referenceDate = "2026-10-14") {
 
 /**
  * Dynamically ranks opportunities for the Today Command Center combining score,
- * deadline urgency, eligibility confidence, workflow state, follow-up due date, and freshness.
- * Excludes gated/inactive records and terminal workflow items.
+ * deadline urgency, eligibility confidence, workflow state, and follow-up due date.
+ * Excludes gated/inactive records and Archived/Rejected items.
  * @param {Array<Object>} records
  * @param {string} referenceDate
  */
-export function buildTodayPriorityQueue(records, referenceDate = "2026-10-14") {
+export function buildTodayPriorityQueue(records, referenceDate = getLocalIsoDate()) {
   const active = records.filter((r) => {
-    const rawStatus = (r.workflow && r.workflow.status) || r.user_status || r.status || "New";
-    const status = normalizeWorkflowStatus(rawStatus);
-    if (TERMINAL_WORKFLOW_STATUSES.has(status)) return false;
+    const status = (r.workflow && r.workflow.status) || r.user_status || "New";
+    if (status === "Archived" || status === "Rejected" || status === "Won") return false;
     if (r.is_active === false) return false;
     return true;
   });
 
   const scored = active.map((r) => {
     const wf = r.workflow || {};
-    const status = normalizeWorkflowStatus(wf.status || r.user_status || r.status || "New");
+    const status = wf.status || r.user_status || "New";
     const priority = wf.priority || r.priority || "P1";
     const followUp = wf.follow_up_date !== undefined ? wf.follow_up_date : r.follow_up_date;
     const bucket = classifyFollowUpBucket(followUp, referenceDate);
@@ -313,41 +264,24 @@ export function buildTodayPriorityQueue(records, referenceDate = "2026-10-14") {
     if (bucket === "Overdue" || bucket === "Due today") {
       urgencyBoost += 18;
       actionBadge = "FOLLOW UP";
-    } else if (bucket === "Tomorrow") {
-      urgencyBoost += 12;
-      actionBadge = "FOLLOW UP";
     } else if (r.category === "freelance_leads") {
-      actionBadge = status === "Contacted" || status === "Follow-up" ? "FOLLOW UP" : "CONTACT LEAD";
-      if (status === "New" || status === "High Priority" || status === "Saved") urgencyBoost += 8;
+      actionBadge = status === "Contacted" ? "FOLLOW UP" : "CONTACT LEAD";
+      if (status === "New" || status === "Saved") urgencyBoost += 8;
     } else if (r.category === "masters_scholarships") {
       actionBadge = "SCHOLARSHIP DEADLINE";
-      const dl = r.deadline || (r.details && r.details.application_deadline) || "";
-      if (dl) urgencyBoost += 10;
+      if (r.deadline && String(r.deadline).startsWith("2026-")) urgencyBoost += 10;
     } else if (r.category === "visa_jobs" || r.category === "remote_jobs") {
-      actionBadge =
-        status === "Applied" || status === "Interview" || status === "Follow-up"
-          ? "FOLLOW UP"
-          : "APPLY";
-      if (status === "Preparing" || status === "High Priority" || status === "Saved") {
-        urgencyBoost += 6;
-      }
+      actionBadge = status === "Applied" ? "FOLLOW UP" : "APPLY";
+      if (status === "Preparing" || status === "Saved") urgencyBoost += 6;
     }
 
-    if (priority === "High" || priority === "P0" || priority === "P1") urgencyBoost += 7;
-    if (status === "High Priority") urgencyBoost += 5;
+    if (priority === "High" || priority === "P0") urgencyBoost += 7;
     if (wf.favorite || r.favorite) urgencyBoost += 4;
-
-    // Freshness boost if verified today
-    if (String(r.last_verified_at || "").startsWith(referenceDate)) {
-      urgencyBoost += 2;
-    }
 
     const queuePriorityScore = Number(r.score_total || 0) + urgencyBoost;
 
     return {
       ...r,
-      status,
-      user_status: status,
       action_badge: actionBadge,
       follow_up_bucket: bucket,
       queue_priority_score: queuePriorityScore
@@ -359,183 +293,72 @@ export function buildTodayPriorityQueue(records, referenceDate = "2026-10-14") {
 
 /**
  * Applies a user CRM mutation to an opportunity record, automatically stamping
- * contacted_date/contacted_at or applied_date/applied_at and appending a genuine timestamped activity event.
+ * contacted_date or applied_date and appending a genuine timestamped activity event.
  * @param {Object} record
  * @param {Object} patch
  * @param {string} isoDate
  */
-export function applyWorkflowTransition(record, patch, isoDate = "2026-10-14") {
-  const prevStatus = normalizeWorkflowStatus(
-    (record.workflow && record.workflow.status) || record.user_status || record.status || "New"
-  );
-  const prevWf = {
-    status: prevStatus,
-    priority: (record.workflow && record.workflow.priority) || record.priority || "P1",
-    favorite: Boolean((record.workflow && record.workflow.favorite) ?? record.favorite),
-    follow_up_date:
-      (record.workflow && record.workflow.follow_up_date) ?? record.follow_up_date ?? null,
-    contacted_date:
-      (record.workflow && record.workflow.contacted_date) ??
-      record.contacted_date ??
-      record.contacted_at ??
-      null,
-    applied_date:
-      (record.workflow && record.workflow.applied_date) ??
-      record.applied_date ??
-      record.applied_at ??
-      null,
-    contacted_at:
-      (record.workflow && record.workflow.contacted_at) ??
-      record.contacted_at ??
-      record.contacted_date ??
-      null,
-    applied_at:
-      (record.workflow && record.workflow.applied_at) ??
-      record.applied_at ??
-      record.applied_date ??
-      null,
-    personal_notes:
-      (record.workflow && record.workflow.personal_notes) ?? record.personal_notes ?? ""
+export function applyWorkflowTransition(record, patch, isoDate = getLocalIsoDate()) {
+  const prevWf = record.workflow || {
+    status: record.user_status || "New",
+    priority: record.priority || "P1",
+    favorite: Boolean(record.favorite),
+    follow_up_date: record.follow_up_date || null,
+    contacted_date: record.contacted_date || null,
+    applied_date: record.applied_date || null,
+    personal_notes: record.personal_notes || ""
   };
 
-  const normalizedPatch = { ...patch };
-  if (normalizedPatch.status) {
-    normalizedPatch.status = normalizeWorkflowStatus(normalizedPatch.status);
-  }
-  if (normalizedPatch.contacted_at !== undefined && normalizedPatch.contacted_date === undefined) {
-    normalizedPatch.contacted_date = normalizedPatch.contacted_at;
-  }
-  if (normalizedPatch.contacted_date !== undefined && normalizedPatch.contacted_at === undefined) {
-    normalizedPatch.contacted_at = normalizedPatch.contacted_date;
-  }
-  if (normalizedPatch.applied_at !== undefined && normalizedPatch.applied_date === undefined) {
-    normalizedPatch.applied_date = normalizedPatch.applied_at;
-  }
-  if (normalizedPatch.applied_date !== undefined && normalizedPatch.applied_at === undefined) {
-    normalizedPatch.applied_at = normalizedPatch.applied_date;
-  }
+  const nextWf = { ...prevWf, ...patch };
+  const events = Array.isArray(record.activity_history) ? [...record.activity_history] : [];
 
-  const nextWf = { ...prevWf, ...normalizedPatch };
-  const rawHistory = Array.isArray(record.activity_history)
-    ? record.activity_history
-    : Array.isArray(record.history)
-      ? record.history
-      : [];
-  const events = rawHistory.map((ev) => ({
-    at: ev.at || (ev.ts ? String(ev.ts).replace("T", " ").replace("Z", "") : `${isoDate} 12:00`),
-    label: ev.label || ev.event || "Activity recorded",
-    ts: ev.ts || ev.at || `${isoDate}T12:00:00Z`,
-    event: ev.event || ev.label || "Activity recorded",
-    actor: ev.actor || "user"
-  }));
+  const activityTimestamp = `${isoDate} ${getLocalTimeHHMM()}`;
 
-  if (normalizedPatch.status && normalizedPatch.status !== prevWf.status) {
-    if (normalizedPatch.status === "Contacted" && !nextWf.contacted_date) {
+  if (patch.status && patch.status !== prevWf.status) {
+    if (patch.status === "Contacted" && !nextWf.contacted_date) {
       nextWf.contacted_date = isoDate;
-      nextWf.contacted_at = isoDate;
     }
-    if (normalizedPatch.status === "Applied" && !nextWf.applied_date) {
+    if (patch.status === "Applied" && !nextWf.applied_date) {
       nextWf.applied_date = isoDate;
-      nextWf.applied_at = isoDate;
     }
-    const label = `Status updated from ${prevWf.status} to ${normalizedPatch.status}`;
     events.unshift({
-      at: `${isoDate} 15:45`,
-      label,
-      ts: `${isoDate}T15:45:00Z`,
-      event: label,
-      actor: "user"
+      at: activityTimestamp,
+      label: `Status updated from ${prevWf.status} to ${patch.status}`
     });
   }
 
-  if (normalizedPatch.priority && normalizedPatch.priority !== prevWf.priority) {
-    const label = `Priority set to ${normalizedPatch.priority}`;
+  if (patch.priority && patch.priority !== prevWf.priority) {
     events.unshift({
-      at: `${isoDate} 15:45`,
-      label,
-      ts: `${isoDate}T15:45:00Z`,
-      event: label,
-      actor: "user"
+      at: activityTimestamp,
+      label: `Priority set to ${patch.priority}`
     });
   }
 
-  if (
-    normalizedPatch.follow_up_date !== undefined &&
-    normalizedPatch.follow_up_date !== prevWf.follow_up_date
-  ) {
-    const label = normalizedPatch.follow_up_date
-      ? `Follow-up scheduled for ${normalizedPatch.follow_up_date}`
-      : "Follow-up cleared";
+  if (patch.follow_up_date !== undefined && patch.follow_up_date !== prevWf.follow_up_date) {
     events.unshift({
-      at: `${isoDate} 15:45`,
-      label,
-      ts: `${isoDate}T15:45:00Z`,
-      event: label,
-      actor: "user"
+      at: activityTimestamp,
+      label: patch.follow_up_date ? `Follow-up scheduled for ${patch.follow_up_date}` : "Follow-up cleared"
     });
   }
 
-  if (
-    normalizedPatch.contacted_date !== undefined &&
-    normalizedPatch.contacted_date !== prevWf.contacted_date
-  ) {
-    const label = normalizedPatch.contacted_date
-      ? `Contacted date recorded: ${normalizedPatch.contacted_date}`
-      : "Contacted date cleared";
+  if (patch.personal_notes !== undefined && patch.personal_notes !== prevWf.personal_notes) {
     events.unshift({
-      at: `${isoDate} 15:45`,
-      label,
-      ts: `${isoDate}T15:45:00Z`,
-      event: label,
-      actor: "user"
-    });
-  }
-
-  if (
-    normalizedPatch.applied_date !== undefined &&
-    normalizedPatch.applied_date !== prevWf.applied_date
-  ) {
-    const label = normalizedPatch.applied_date
-      ? `Applied date recorded: ${normalizedPatch.applied_date}`
-      : "Applied date cleared";
-    events.unshift({
-      at: `${isoDate} 15:45`,
-      label,
-      ts: `${isoDate}T15:45:00Z`,
-      event: label,
-      actor: "user"
-    });
-  }
-
-  if (
-    normalizedPatch.personal_notes !== undefined &&
-    normalizedPatch.personal_notes !== prevWf.personal_notes
-  ) {
-    const label = "Personal CRM note saved";
-    events.unshift({
-      at: `${isoDate} 15:45`,
-      label,
-      ts: `${isoDate}T15:45:00Z`,
-      event: label,
-      actor: "user"
+      at: activityTimestamp,
+      label: "Personal CRM note saved"
     });
   }
 
   return {
     ...record,
-    status: nextWf.status,
     user_status: nextWf.status,
     priority: nextWf.priority,
     favorite: nextWf.favorite,
     follow_up_date: nextWf.follow_up_date,
     contacted_date: nextWf.contacted_date,
     applied_date: nextWf.applied_date,
-    contacted_at: nextWf.contacted_at,
-    applied_at: nextWf.applied_at,
     personal_notes: nextWf.personal_notes,
     workflow: nextWf,
-    activity_history: events,
-    history: events
+    activity_history: events
   };
 }
 
@@ -565,19 +388,15 @@ export function syncDatabaseToSheetRows(existingSheetRows, incomingMachineRecord
     if (!existing) {
       inserted += 1;
       const wf = machine.workflow || {};
-      const status = normalizeWorkflowStatus(wf.status || machine.user_status || machine.status || "New");
       rowMap.set(id, {
         ...machine,
         record_id: id,
-        status,
-        user_status: status,
+        user_status: wf.status || machine.user_status || "New",
         priority: wf.priority || machine.priority || "P1",
         favorite: Boolean(wf.favorite ?? machine.favorite ?? false),
         follow_up_date: wf.follow_up_date ?? machine.follow_up_date ?? null,
-        contacted_date: wf.contacted_date ?? machine.contacted_date ?? machine.contacted_at ?? null,
-        applied_date: wf.applied_date ?? machine.applied_date ?? machine.applied_at ?? null,
-        contacted_at: wf.contacted_at ?? machine.contacted_at ?? machine.contacted_date ?? null,
-        applied_at: wf.applied_at ?? machine.applied_at ?? machine.applied_date ?? null,
+        contacted_date: wf.contacted_date ?? machine.contacted_date ?? null,
+        applied_date: wf.applied_date ?? machine.applied_date ?? null,
         personal_notes: wf.personal_notes ?? machine.personal_notes ?? ""
       });
     } else {
@@ -593,35 +412,17 @@ export function syncDatabaseToSheetRows(existingSheetRows, incomingMachineRecord
           preservedUserFields += 1;
         }
       }
-      const resolvedStatus = normalizeWorkflowStatus(
-        existing.user_status || existing.status || (existing.workflow && existing.workflow.status) || merged.status
-      );
-      merged.status = resolvedStatus;
-      merged.user_status = resolvedStatus;
-      merged.contacted_date = existing.contacted_date ?? existing.contacted_at ?? merged.contacted_date ?? null;
-      merged.contacted_at = existing.contacted_at ?? existing.contacted_date ?? merged.contacted_at ?? null;
-      merged.applied_date = existing.applied_date ?? existing.applied_at ?? merged.applied_date ?? null;
-      merged.applied_at = existing.applied_at ?? existing.applied_date ?? merged.applied_at ?? null;
-
-      if (merged.workflow || existing.workflow) {
+      if (merged.workflow) {
         merged.workflow = {
-          ...(merged.workflow || {}),
-          ...(existing.workflow || {}),
-          status: resolvedStatus,
-          priority: merged.priority || (merged.workflow && merged.workflow.priority) || "P1",
-          favorite: Boolean(merged.favorite ?? (merged.workflow && merged.workflow.favorite)),
-          follow_up_date:
-            merged.follow_up_date ?? (merged.workflow && merged.workflow.follow_up_date) ?? null,
-          contacted_date: merged.contacted_date,
-          applied_date: merged.applied_date,
-          contacted_at: merged.contacted_at,
-          applied_at: merged.applied_at,
-          personal_notes:
-            merged.personal_notes ?? (merged.workflow && merged.workflow.personal_notes) ?? ""
+          ...merged.workflow,
+          status: merged.user_status || merged.workflow.status,
+          priority: merged.priority || merged.workflow.priority,
+          favorite: Boolean(merged.favorite ?? merged.workflow.favorite),
+          follow_up_date: merged.follow_up_date ?? merged.workflow.follow_up_date,
+          contacted_date: merged.contacted_date ?? merged.workflow.contacted_date,
+          applied_date: merged.applied_date ?? merged.workflow.applied_date,
+          personal_notes: merged.personal_notes ?? merged.workflow.personal_notes
         };
-      }
-      if (Array.isArray(existing.activity_history) && existing.activity_history.length > 0) {
-        merged.activity_history = existing.activity_history;
       }
       rowMap.set(id, merged);
     }
@@ -635,10 +436,10 @@ export function syncDatabaseToSheetRows(existingSheetRows, incomingMachineRecord
   };
 }
 
+
 export function normalizeScoreComponents(record) {
   const sc = record && record.score_components;
   if (!sc) return [];
-  const explanations = Array.isArray(record.score_explanation) ? record.score_explanation : [];
   if (Array.isArray(sc)) return sc;
   const cat = record.category || "";
   const labelsByCat = {
@@ -672,11 +473,10 @@ export function normalizeScoreComponents(record) {
     }
   };
   const map = labelsByCat[cat] || {};
-  return Object.entries(sc).map(([k, pts], idx) => ({
+  return Object.entries(sc).map(([k, pts]) => ({
     key: k,
     label: (map[k] && map[k][0]) || k,
     points: Number(pts || 0),
-    max_points: (map[k] && map[k][1]) || 25,
-    rationale: explanations[idx] || "Verified from primary source"
+    max_points: (map[k] && map[k][1]) || 25
   }));
 }

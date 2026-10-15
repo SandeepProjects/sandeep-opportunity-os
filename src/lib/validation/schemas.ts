@@ -1,10 +1,4 @@
-import {
-  CANONICAL_WORKFLOW_STATUSES,
-  type OpportunityRecord,
-  type CandidateProfile,
-  type WorkflowStatus
-} from "../../types/opportunity";
-import { normalizeWorkflowStatus } from "../../engine/core";
+import type { OpportunityRecord, CandidateProfile, WorkflowStatus } from "../../types/opportunity";
 
 const VALID_CATEGORIES = new Set([
   "freelance_leads",
@@ -13,7 +7,18 @@ const VALID_CATEGORIES = new Set([
   "remote_jobs"
 ]);
 
-export const VALID_STATUSES: ReadonlyArray<WorkflowStatus> = CANONICAL_WORKFLOW_STATUSES;
+export const VALID_STATUSES: ReadonlyArray<WorkflowStatus> = [
+  "New",
+  "Saved",
+  "Preparing",
+  "Contacted",
+  "Applied",
+  "Interviewing",
+  "Follow-Up",
+  "Won",
+  "Rejected",
+  "Archived"
+];
 
 export function validateOpportunityRecord(input: unknown): OpportunityRecord {
   if (!input || typeof input !== "object") {
@@ -29,13 +34,6 @@ export function validateOpportunityRecord(input: unknown): OpportunityRecord {
   if (typeof rec.source_url !== "string" || !rec.source_url.startsWith("https://")) {
     throw new Error(`Invalid source_url on ${rec.id}`);
   }
-  const normalizedStatus = normalizeWorkflowStatus(
-    (rec.user_status as string | undefined) ||
-      (rec.status as string | undefined) ||
-      ((rec.workflow as Record<string, unknown> | undefined)?.status as string | undefined)
-  );
-  rec.status = normalizedStatus;
-  rec.user_status = normalizedStatus;
   return rec as unknown as OpportunityRecord;
 }
 

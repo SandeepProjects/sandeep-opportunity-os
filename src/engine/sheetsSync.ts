@@ -1,21 +1,15 @@
 import type { OpportunityRecord } from "../types/opportunity";
 
-export const USER_OWNED_CRM_COLUMNS: ReadonlySet<keyof OpportunityRecord> = new Set<
-  keyof OpportunityRecord
->([
-  "status",
+export const USER_OWNED_CRM_COLUMNS: ReadonlySet<keyof OpportunityRecord> = new Set([
   "user_status",
+  "status",
   "priority",
   "favorite",
   "follow_up_date",
-  "contacted_date",
-  "applied_date",
-  "contacted_at",
-  "applied_at",
   "personal_notes",
-  "workflow",
+  "history",
   "activity_history",
-  "history"
+  "workflow"
 ]);
 
 export interface SheetSyncSummary {

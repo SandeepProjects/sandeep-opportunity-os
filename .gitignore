@@ -1,10 +1,12 @@
 node_modules/
 dist/
-.env
-.env.*
-!.env.example
-*.local
 test-results/
 playwright-report/
 blob-report/
-playwright/.cache/
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.db
+.DS_Store
