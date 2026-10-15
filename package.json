@@ -12,6 +12,7 @@
     "lint": "eslint .",
     "test": "node --test tests/opportunity_os.test.mjs",
     "test:e2e": "playwright test",
+    "sync:data": "node scripts/sync-data.mjs",
     "seed:supabase": "node scripts/seed-supabase.mjs"
   },
   "dependencies": {

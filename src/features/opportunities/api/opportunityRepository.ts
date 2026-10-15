@@ -1,6 +1,7 @@
 import { supabaseClient, isSupabaseConfigured } from "../../../lib/supabase/client";
 import verifiedSeed from "../../../data/verified_seed_24.json";
 import { applyWorkflowTransition, syncDatabaseToSheetRows } from "../../../engine/core";
+import { executeSyncPipeline, type SyncTelemetry } from "../../../pipeline/syncService";
 import type {
   OpportunityRecord,
   CandidateProfile,
@@ -9,6 +10,9 @@ import type {
 
 const CRM_STORAGE_KEY = "sandeep_opp_os_crm_v2_state";
 const PROFILE_STORAGE_KEY = "sandeep_opp_os_profile_v2_state";
+
+export const NATIVE_SHEET_ID = "1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0";
+export const UPLOADED_XLSX_ID = "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1";
 
 function getLatestVerificationTimestamp(records: OpportunityRecord[]): string {
   const timestamps = records
@@ -27,6 +31,7 @@ export interface RepositoryState {
   nativeSheetId: string;
   uploadedXlsxId: string;
   lastSyncedAt: string;
+  syncTelemetry?: SyncTelemetry | null;
 }
 
 function loadPersistedCrmMap(): Record<string, Partial<OpportunityRecord>> {
@@ -39,7 +44,6 @@ function loadPersistedCrmMap(): Record<string, Partial<OpportunityRecord>> {
   }
 }
 
-
 function loadPersistedProfile(seedProfile: CandidateProfile): CandidateProfile {
   if (typeof window === "undefined" || !window.localStorage) return seedProfile;
   const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
@@ -50,6 +54,7 @@ function loadPersistedProfile(seedProfile: CandidateProfile): CandidateProfile {
     return seedProfile;
   }
 }
+
 function savePersistedCrmMap(map: Record<string, Partial<OpportunityRecord>>): void {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
@@ -77,8 +82,8 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
         mode: "SUPABASE_LIVE",
         opportunities: data as unknown as OpportunityRecord[],
         profile,
-        nativeSheetId: "17NhC05g7jyTqDZRo62sGzERh9XUad4KJ8X8OBcXqb5Q",
-        uploadedXlsxId: "19igEOYpemKTRojy4b94QPbCE78gT7n2O",
+        nativeSheetId: NATIVE_SHEET_ID,
+        uploadedXlsxId: UPLOADED_XLSX_ID,
         lastSyncedAt: getLatestVerificationTimestamp(data as unknown as OpportunityRecord[])
       };
     }
@@ -104,10 +109,47 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
     mode: "SEED_IMPORT_ADAPTER",
     opportunities: merged,
     profile,
-    nativeSheetId: "17NhC05g7jyTqDZRo62sGzERh9XUad4KJ8X8OBcXqb5Q",
-    uploadedXlsxId: "19igEOYpemKTRojy4b94QPbCE78gT7n2O",
+    nativeSheetId: NATIVE_SHEET_ID,
+    uploadedXlsxId: UPLOADED_XLSX_ID,
     lastSyncedAt: getLatestVerificationTimestamp(merged)
   };
+}
+
+export async function performOpportunitySync(
+  currentRecords: OpportunityRecord[],
+  candidateProfile?: CandidateProfile
+): Promise<{
+  state: RepositoryState;
+  telemetry: SyncTelemetry;
+}> {
+  const { records, telemetry } = await executeSyncPipeline(currentRecords, candidateProfile);
+
+  const map = loadPersistedCrmMap();
+  for (const r of records) {
+    if (r.workflow || r.user_status) {
+      map[r.id] = {
+        user_status: r.user_status,
+        priority: r.priority,
+        workflow: r.workflow,
+        activity_history: r.activity_history
+      };
+    }
+  }
+  savePersistedCrmMap(map);
+
+  const state: RepositoryState = {
+    mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
+    opportunities: records,
+    profile:
+      candidateProfile ||
+      loadPersistedProfile(verifiedSeed.candidate_profile as unknown as CandidateProfile),
+    nativeSheetId: NATIVE_SHEET_ID,
+    uploadedXlsxId: UPLOADED_XLSX_ID,
+    lastSyncedAt: telemetry.completedAt,
+    syncTelemetry: telemetry
+  };
+
+  return { state, telemetry };
 }
 
 export function persistCandidateProfile(profile: CandidateProfile): CandidateProfile {

@@ -10,21 +10,30 @@ import { StatusBadge } from "../../components/ui/StatusBadge";
 import { EligibilityBadge } from "../../components/ui/EligibilityBadge";
 import { PriorityBadge } from "../../components/ui/PriorityBadge";
 import { formatLongDate, getGreeting, getLocalIsoDate } from "../../lib/date";
+import { getNextScheduledSync } from "../../config/dataSources";
+import { formatRelativeTime } from "../../pipeline/syncService";
 
 interface TodayPageProps {
   opportunities: OpportunityRecord[];
   onSelectOpportunity: (opp: OpportunityRecord) => void;
   onNavigate?: (path: AppRoutePath) => void;
+  lastSyncedAt?: string;
+  onSyncNow?: () => void;
+  isSyncing?: boolean;
 }
 
 export const TodayPage: React.FC<TodayPageProps> = ({
   opportunities,
   onSelectOpportunity,
-  onNavigate
+  onNavigate,
+  lastSyncedAt,
+  onSyncNow,
+  isSyncing = false
 }) => {
   const todayIso = getLocalIsoDate();
   const queue = buildTodayPriorityQueue(opportunities, todayIso);
   const buckets = bucketFollowUps(opportunities, todayIso);
+  const nextSync = getNextScheduledSync();
 
   const activeRecords = opportunities.filter((o) => o.is_active !== false);
   const highFitCount = activeRecords.filter((o) => o.score_total >= 85).length;
@@ -65,6 +74,27 @@ export const TodayPage: React.FC<TodayPageProps> = ({
         eyebrow="EXECUTIVE COMMAND CENTER · NICOSIA, CYPRUS (EEST)"
         title={`${getGreeting()}, Sandeep · ${formatLongDate(todayIso)}`}
         subtitle={`Ranked daily action queue across ${opportunities.length} verified opportunities (${activeRecords.length} active matches, ${gatedCount} excluded by hard eligibility gates).`}
+        actions={
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            <span
+              className="os-badge neutral mono"
+              title={`Last synced: ${lastSyncedAt || "Seed Snapshot"} · Next automatic sync: ${nextSync.formattedUtc}`}
+            >
+              🔄 Synced {formatRelativeTime(lastSyncedAt)} · Next {nextSync.formattedUtc}
+            </span>
+            {onSyncNow && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={onSyncNow}
+                disabled={isSyncing}
+                style={{ padding: "4px 10px", fontSize: "11.5px" }}
+              >
+                {isSyncing ? "Syncing..." : "Sync Now"}
+              </button>
+            )}
+          </div>
+        }
       />
 
       <MetricStrip

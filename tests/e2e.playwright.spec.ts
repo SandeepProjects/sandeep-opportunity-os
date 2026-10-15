@@ -72,4 +72,36 @@ test.describe("Sandeep Opportunity OS — enterprise frontend flows", () => {
     await page.getByRole("button", { name: "Switch to light mode" }).click();
     await expect(shell).toHaveAttribute("data-theme", "light");
   });
+
+  test("Operations renders data source sections and manual sync runs", async ({ page }) => {
+    await page.goto("/operations");
+    await expect(page.locator("h2:has-text('Automated 6-Hour Scheduler & Sync Telemetry')")).toBeVisible();
+    await expect(page.locator("h2:has-text('1. Google Sheets Sources')")).toBeVisible();
+    await expect(page.locator("h2:has-text('2. Google Drive Trackers')")).toBeVisible();
+    await expect(page.locator("h2:has-text('3. Local-Only Muse Workstation Trackers')")).toBeVisible();
+    await expect(page.locator("h2:has-text('4. Canonical Database')")).toBeVisible();
+    await expect(page.locator("h2:has-text('5. Legacy & Disconnected')")).toBeVisible();
+
+    // Verify setup guide toggle
+    const toggleBtn = page.getByRole("button", { name: "Service Account Setup Guide" });
+    await toggleBtn.click();
+    await expect(page.locator(".os-setup-guide")).toBeVisible();
+
+    // Trigger sync
+    const syncBtn = page.getByRole("button", { name: "Sync Data Now" });
+    await syncBtn.click();
+    await expect(page.locator(".os-telemetry-val:has-text('24 Records')")).toBeVisible();
+  });
+
+  test("Opportunity drawer renders Sources & Files / Drive Pack section", async ({ page }) => {
+    await page.goto("/jobs");
+    const firstRecord = page.locator(".responsive-switch [role='button']:visible").first();
+    await firstRecord.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    await expect(page.locator("h3:has-text('6. Sources & Files / Drive Pack')")).toBeVisible();
+    await expect(page.locator(".os-drive-pack-card:has-text('Source Tracker')")).toBeVisible();
+    await expect(page.locator(".os-drive-pack-card:has-text('Drive Application Pack')")).toBeVisible();
+  });
 });

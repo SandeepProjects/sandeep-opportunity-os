@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { AppRouterProvider, useAppRouter } from "./app/router/router";
 import {
   fetchOpportunityState,
+  performOpportunitySync,
   persistWorkflowMutation,
   persistCandidateProfile,
   type RepositoryState
@@ -21,6 +22,7 @@ const MainContent: React.FC = () => {
   const [repoState, setRepoState] = useState<RepositoryState | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityRecord | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   useEffect(() => {
     void fetchOpportunityState().then((state) => {
@@ -54,12 +56,22 @@ const MainContent: React.FC = () => {
   );
 
   const handleTriggerSync = useCallback(async () => {
-    const refreshed = await fetchOpportunityState();
-    setRepoState(refreshed);
-    setSelectedOpportunity((current) =>
-      current ? refreshed.opportunities.find((item) => item.id === current.id) || null : null
-    );
-  }, []);
+    setIsSyncing(true);
+    try {
+      if (repoState) {
+        const { state } = await performOpportunitySync(repoState.opportunities, repoState.profile);
+        setRepoState(state);
+        setSelectedOpportunity((current) =>
+          current ? state.opportunities.find((item) => item.id === current.id) || null : null
+        );
+      } else {
+        const refreshed = await fetchOpportunityState();
+        setRepoState(refreshed);
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [repoState]);
 
   const handleUpdateProfile = useCallback((nextProfile: CandidateProfile) => {
     const persisted = persistCandidateProfile(nextProfile);
@@ -81,6 +93,7 @@ const MainContent: React.FC = () => {
       mode={mode}
       lastSyncedAt={lastSyncedAt}
       onSyncNow={handleTriggerSync}
+      isSyncing={isSyncing}
       theme={theme}
       onToggleTheme={toggleTheme}
     >
@@ -89,6 +102,9 @@ const MainContent: React.FC = () => {
           opportunities={opportunities}
           onSelectOpportunity={setSelectedOpportunity}
           onNavigate={navigate}
+          lastSyncedAt={lastSyncedAt}
+          onSyncNow={handleTriggerSync}
+          isSyncing={isSyncing}
         />
       )}
       {currentPath === "/freelance" && (
@@ -146,6 +162,8 @@ const MainContent: React.FC = () => {
           recordCount={opportunities.length}
           opportunities={opportunities}
           onTriggerSync={handleTriggerSync}
+          isSyncing={isSyncing}
+          telemetry={repoState.syncTelemetry}
         />
       )}
       {currentPath === "/profile" && (

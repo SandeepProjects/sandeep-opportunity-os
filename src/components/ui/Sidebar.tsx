@@ -17,6 +17,7 @@ interface SidebarProps {
   theme: "dark" | "light";
   onToggleTheme: () => void;
   onSyncNow: () => void;
+  isSyncing?: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   theme,
   onToggleTheme,
   onSyncNow,
+  isSyncing = false,
   mobileOpen,
   onCloseMobile
 }) => {
@@ -123,10 +125,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="button"
             className="btn-secondary"
             onClick={onSyncNow}
-            aria-label="Refresh the configured opportunity data source"
+            disabled={isSyncing}
+            aria-label="Synchronize opportunity data sources"
           >
             <Icon name="sync" size={14} />
-            <span>Refresh</span>
+            <span>{isSyncing ? "Syncing..." : "Sync Data"}</span>
           </button>
         </div>
       </div>

@@ -5,9 +5,15 @@ interface SyncStatusProps {
   mode: DataSourceMode;
   lastSyncedAt: string;
   onSyncNow: () => void;
+  isSyncing?: boolean;
 }
 
-export const SyncStatus: React.FC<SyncStatusProps> = ({ mode, lastSyncedAt, onSyncNow }) => (
+export const SyncStatus: React.FC<SyncStatusProps> = ({
+  mode,
+  lastSyncedAt,
+  onSyncNow,
+  isSyncing = false
+}) => (
   <div className="os-sync-control">
     <span className="os-sync-pill" title={`Latest dataset verification: ${lastSyncedAt}`}>
       <span className="os-sync-dot" />
@@ -18,9 +24,10 @@ export const SyncStatus: React.FC<SyncStatusProps> = ({ mode, lastSyncedAt, onSy
       type="button"
       className="btn-secondary"
       onClick={onSyncNow}
+      disabled={isSyncing}
       aria-label="Refresh the configured opportunity data source"
     >
-      Refresh Data
+      {isSyncing ? "Syncing..." : "Sync Data"}
     </button>
   </div>
 );

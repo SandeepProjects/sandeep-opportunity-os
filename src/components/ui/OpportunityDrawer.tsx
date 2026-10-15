@@ -388,10 +388,107 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
             </div>
           </section>
 
-          {/* 6. Source Provenance & Research Metadata */}
+          {/* 6. Sources & Files / Drive Pack */}
           <section className="os-drawer-section">
             <h3 className="os-drawer-section-title">
-              <span>6. Source Provenance & Research Metadata</span>
+              <span>6. Sources &amp; Files / Drive Pack</span>
+              <span className="os-badge info mono">Google Workspace</span>
+            </h3>
+            <div className="os-drive-pack-grid">
+              <div className="os-drive-pack-card">
+                <span className="os-tabs-label">Source Tracker</span>
+                <h4>
+                  {opportunity.category === "masters_scholarships"
+                    ? "master-spreadsheet.xlsx (Drive XLSX)"
+                    : opportunity.category === "visa_jobs"
+                      ? "MASTER_JOB_APPLICATION_TRACKER.xlsx"
+                      : "MUSE | FACEBOOK & INSTAGRAM JOB HUNTER"}
+                </h4>
+                <span className="os-source-notes">
+                  {opportunity.category === "masters_scholarships"
+                    ? "Tabs: MASTER_PROGRAMMES, SCHOLARSHIPS"
+                    : opportunity.category === "visa_jobs"
+                      ? "Folder: Job Apply — Trackers"
+                      : "Tab: ALL LEADS"}
+                </span>
+                <div style={{ marginTop: "auto", paddingTop: "6px" }}>
+                  {opportunity.category === "masters_scholarships" ? (
+                    <a
+                      href="https://docs.google.com/spreadsheets/d/156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj/edit"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary"
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                    >
+                      Open Master's Workbook ↗
+                    </a>
+                  ) : opportunity.category === "visa_jobs" ? (
+                    <a
+                      href="https://drive.google.com/file/d/1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1/view"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary"
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                    >
+                      Open Master Tracker ↗
+                    </a>
+                  ) : (
+                    <a
+                      href="https://docs.google.com/spreadsheets/d/1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0/edit"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-secondary"
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                    >
+                      Open Social Hunter Sheet ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              <div className="os-drive-pack-card">
+                <span className="os-tabs-label">Drive Application Pack</span>
+                <h4>
+                  {opportunity.category === "masters_scholarships"
+                    ? "Master's Admissions Folder"
+                    : wf.status === "Applied"
+                      ? "Job Apply — Applied"
+                      : wf.status === "Preparing" || wf.status === "Saved"
+                        ? "Job Apply — Pending"
+                        : "Job Apply (Root)"}
+                </h4>
+                <span className="os-source-notes">
+                  {opportunity.category === "masters_scholarships"
+                    ? "Admissions packs & scholarship statements"
+                    : `Application workflow stage: ${wf.status}`}
+                </span>
+                <div style={{ marginTop: "auto", paddingTop: "6px" }}>
+                  <a
+                    href={
+                      opportunity.category === "masters_scholarships"
+                        ? "https://drive.google.com/drive/folders/1S_FYU8b1xeP6S098SkYaADWYIkH5a_Nf"
+                        : wf.status === "Applied"
+                          ? "https://drive.google.com/drive/folders/1eS96WrT6HQ8zqbSntUPgtnICYRNa-bUM"
+                          : wf.status === "Preparing" || wf.status === "Saved"
+                            ? "https://drive.google.com/drive/folders/1OMDTYRW4uQmz8P1cCTXFTSz0yrGmpc_l"
+                            : "https://drive.google.com/drive/folders/1g0XUzrlsOr9ze6Peaw6SMhcDLDYZSuE0"
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary"
+                    style={{ fontSize: "11px", padding: "4px 8px" }}
+                  >
+                    Open Drive Folder ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 7. Source Provenance & Research Metadata */}
+          <section className="os-drawer-section">
+            <h3 className="os-drawer-section-title">
+              <span>7. Source Provenance & Research Metadata</span>
               <span className="mono">Verified: {opportunity.last_verified_at}</span>
             </h3>
             <ul style={{ margin: "0 0 10px", paddingLeft: "18px", fontSize: "12.5px" }}>

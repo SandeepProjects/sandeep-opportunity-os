@@ -1184,3 +1184,193 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ==========================================================================
+   OPERATIONS & MUSE INGESTION DATA SOURCE STYLES
+   ========================================================================== */
+.os-telemetry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1024px) {
+  .os-telemetry-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .os-telemetry-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.os-telemetry-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.os-telemetry-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 2px 0;
+}
+
+.os-sources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.os-source-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color var(--transition-fast);
+}
+
+.os-source-card:hover {
+  border-color: var(--border-default);
+}
+
+.os-source-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.os-source-card-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.os-source-id {
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.os-source-purpose {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.os-source-notes {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.os-tabs-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.os-tabs-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.os-tabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.os-stale-callout {
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 11.5px;
+  color: var(--warning-fg);
+  line-height: 1.35;
+}
+
+.os-setup-guide {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-top: 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.os-setup-guide h4 {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  color: var(--text-primary);
+}
+
+.os-setup-guide ul {
+  margin: 6px 0 10px;
+  padding-left: 20px;
+}
+
+.os-setup-guide li {
+  margin-bottom: 4px;
+}
+
+.os-guide-law {
+  padding: 8px 10px;
+  background-color: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--danger-fg);
+  margin-top: 8px;
+}
+
+/* Sources & Files in Drawer */
+.os-drive-pack-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .os-drive-pack-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.os-drive-pack-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.os-drive-pack-card h4 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}

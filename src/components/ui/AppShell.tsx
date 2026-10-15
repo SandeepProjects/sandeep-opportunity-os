@@ -14,6 +14,7 @@ interface AppShellProps {
   mode: DataSourceMode;
   lastSyncedAt: string;
   onSyncNow: () => void;
+  isSyncing?: boolean;
   theme: "dark" | "light";
   onToggleTheme: () => void;
   children: React.ReactNode;
@@ -38,6 +39,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   mode,
   lastSyncedAt,
   onSyncNow,
+  isSyncing = false,
   theme,
   onToggleTheme,
   children
@@ -105,6 +107,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         theme={theme}
         onToggleTheme={onToggleTheme}
         onSyncNow={onSyncNow}
+        isSyncing={isSyncing}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
       />
@@ -169,7 +172,12 @@ export const AppShell: React.FC<AppShellProps> = ({
               )}
             </div>
 
-            <SyncStatus mode={mode} lastSyncedAt={lastSyncedAt} onSyncNow={onSyncNow} />
+            <SyncStatus
+              mode={mode}
+              lastSyncedAt={lastSyncedAt}
+              onSyncNow={onSyncNow}
+              isSyncing={isSyncing}
+            />
           </div>
         </header>
 

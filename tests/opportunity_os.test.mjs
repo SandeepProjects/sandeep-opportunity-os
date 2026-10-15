@@ -17,6 +17,12 @@ import {
   normalizeScoreComponents
 } from "../src/engine/core.mjs";
 
+import {
+  DATA_SOURCE_REGISTRY,
+  getDataSourcesByCategory,
+  getNextScheduledSync
+} from "../src/config/dataSources.mjs";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const seedPath = path.resolve(__dirname, "../src/data/verified_seed_24.json");
 const seedData = JSON.parse(fs.readFileSync(seedPath, "utf8"));
@@ -188,5 +194,58 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
     assert.equal(report.gatedCount, 3);
     assert.equal(report.mergeContract.totalRows, 24);
     assert.equal(report.externalSyncPerformed, false);
+  });
+
+  it("14. canonical data source registry contains verified resources, correct Google IDs, and zero Windows paths", () => {
+    assert.ok(DATA_SOURCE_REGISTRY.length >= 15);
+    const socialHunter = DATA_SOURCE_REGISTRY.find((ds) => ds.id === "muse_social_job_hunter");
+    assert.ok(socialHunter);
+    assert.equal(socialHunter.spreadsheetId, "1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0");
+    assert.equal(socialHunter.status, "Permission required");
+    assert.deepEqual(socialHunter.verifiedTabs, [
+      "ALL LEADS",
+      "DAILY RESULTS",
+      "GROUP DIRECTORY",
+      "OUTREACH TRACKER",
+      "SEARCH LOG"
+    ]);
+
+    const masterApp = DATA_SOURCE_REGISTRY.find((ds) => ds.id === "master_job_application_tracker");
+    assert.ok(masterApp);
+    assert.equal(masterApp.driveId, "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1");
+    assert.equal(masterApp.status, "Permission required");
+
+    const mastersWb = DATA_SOURCE_REGISTRY.find((ds) => ds.id === "masters_workbook");
+    assert.ok(mastersWb);
+    assert.equal(mastersWb.status, "Stale");
+
+    const legacy = getDataSourcesByCategory("legacy");
+    assert.equal(legacy.length, 2);
+    assert.ok(legacy.some((ds) => ds.id === "legacy_sheet_17nh"));
+    assert.ok(legacy.some((ds) => ds.id === "legacy_workbook_19ig"));
+
+    const localSources = getDataSourcesByCategory("local");
+    assert.equal(localSources.length, 6);
+    for (const src of localSources) {
+      assert.equal(src.url, null);
+      assert.ok(!JSON.stringify(src).includes("C:\\"), "Exposed local Windows path found in source registry");
+    }
+  });
+
+  it("15. getNextScheduledSync calculates exact intervals in 00, 06, 12, 18 UTC sequence", () => {
+    const t1 = new Date("2026-10-15T02:30:00Z");
+    const next1 = getNextScheduledSync(t1);
+    assert.equal(next1.formattedUtc, "06:00 UTC");
+    assert.equal(next1.minutesRemaining, 210);
+
+    const t2 = new Date("2026-10-15T06:00:00Z");
+    const next2 = getNextScheduledSync(t2);
+    assert.equal(next2.formattedUtc, "06:00 UTC");
+    assert.equal(next2.minutesRemaining, 0);
+
+    const t3 = new Date("2026-10-15T19:45:00Z");
+    const next3 = getNextScheduledSync(t3);
+    assert.equal(next3.formattedUtc, "00:00 UTC");
+    assert.equal(next3.minutesRemaining, 255);
   });
 });
