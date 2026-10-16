@@ -236,10 +236,11 @@ export async function fetchMuseSocialLeads({
   token,
   spreadsheetId = "1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0",
   tabName = "ALL LEADS",
+  range = `'${tabName}'`,
   fetchFn = globalThis.fetch
 }) {
-  const range = `'${tabName}'!A1:Z1000`;
-  const result = await fetchSheetValues({ spreadsheetId, range, token, fetchFn });
+  const queryRange = range.includes("!") || range.startsWith("'") ? range : `'${range}'`;
+  const result = await fetchSheetValues({ spreadsheetId, range: queryRange, token, fetchFn });
 
   if (!result.ok) {
     return {

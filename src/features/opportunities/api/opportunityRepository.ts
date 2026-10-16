@@ -1,7 +1,7 @@
 import { supabaseClient, isSupabaseConfigured } from "../../../lib/supabase/client";
 import verifiedSeed from "../../../data/verified_seed_24.json";
 import { applyWorkflowTransition, syncDatabaseToSheetRows } from "../../../engine/core";
-import { executeSyncPipeline, loadLatestSyncTelemetry, type SyncTelemetry } from "../../../pipeline/syncService";
+import { executeSyncPipeline, loadLatestSyncTelemetry, type SyncTelemetry, type SourceSyncDiagnostic } from "../../../pipeline/syncService";
 import { getNextScheduledSync } from "../../../config/dataSources";
 import type {
   OpportunityRecord,
@@ -109,32 +109,9 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
             recordsGated: r.filtered_count || 0,
             userFieldsPreserved: r.accepted_count || 0,
             totalRecords: r.accepted_count || data.length,
-            sourceDiagnostics: [
-              {
-                id: "muse_social_job_hunter",
-                name: "MUSE | FACEBOOK & INSTAGRAM JOB HUNTER",
-                status: "Connected",
-                statusCode: 200,
-                message: "Native Google Sheet (ALL LEADS) connected.",
-                recordsCount: 1064
-              },
-              {
-                id: "master_job_application_tracker",
-                name: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
-                status: "Connected",
-                statusCode: 200,
-                message: "Master Job Application Tracker connected.",
-                recordsCount: 1019
-              },
-              {
-                id: "masters_workbook",
-                name: "master-spreadsheet.xlsx",
-                status: "Connected",
-                statusCode: 200,
-                message: "Master's Degree & Scholarship workbook connected.",
-                recordsCount: 33
-              }
-            ],
+            sourceDiagnostics: Array.isArray((r as Record<string, unknown>).source_diagnostics)
+              ? ((r as Record<string, unknown>).source_diagnostics as SourceSyncDiagnostic[])
+              : [],
             nextScheduledSyncIso: nextSync.iso,
             nextScheduledSyncUtc: nextSync.formattedUtc
           };

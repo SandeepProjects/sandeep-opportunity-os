@@ -77,7 +77,14 @@ export async function executeSyncPipeline(
   if (typeof window !== "undefined" && typeof window.fetch === "function") {
     const edgeFunctionEndpoint = `${supabaseUrl}/functions/v1/sync-opportunity-data`;
     const endpointsToTry: Array<{ url: string; headers: Record<string, string> }> = [
-      { url: edgeFunctionEndpoint, headers: { "Content-Type": "application/json", apikey: supabaseAnonKey } },
+      {
+        url: edgeFunctionEndpoint,
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`
+        }
+      },
       { url: "/api/sync", headers: { "Content-Type": "application/json" } }
     ];
 

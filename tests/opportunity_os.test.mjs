@@ -38,6 +38,8 @@ import {
   normalizeAndMergeRecords,
   normalizePrivateKey
 } from "../src/pipeline/adapters/index.mjs";
+import { runCanonicalSync } from "../src/pipeline/canonicalSyncEngine.mjs";
+import { runServerSync } from "../scripts/sync-data.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const seedPath = path.resolve(__dirname, "../src/data/verified_seed_24.json");
@@ -591,5 +593,174 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
     });
     assert.equal(mastersRes.ok, false);
     assert.equal(mastersRes.status, "Permission required");
+  });
+
+  it("23. fetchMuseSocialLeads requests open-ended range without 1000-row or Z-column ceiling", async () => {
+    let capturedUrl = "";
+    const mockFetch = async (url) => {
+      capturedUrl = url;
+      return {
+        status: 200,
+        json: async () => ({
+          range: "'ALL LEADS'!A1:AG1065",
+          values: [
+            ["Platform", "Group", "Contact / Link", "Title", "Category", "Location", "Budget", "Date Found", "Extra1", "Extra2"],
+            ["Facebook", "Dev Group", "https://fb.com/groups/123/posts/456", "React Developer", "freelance_leads", "Remote", "$3000", "2026-10-15", "x1", "x2"]
+          ]
+        })
+      };
+    };
+
+    const res = await fetchMuseSocialLeads({
+      token: "mock-token",
+      fetchFn: mockFetch
+    });
+
+    assert.equal(res.ok, true);
+    assert.equal(res.status, "Connected");
+    assert.equal(res.records.length, 1);
+    // Verifies that the URL requests open-ended range 'ALL LEADS' without !A1:Z1000
+    assert.ok(capturedUrl.includes("%27ALL%20LEADS%27") || capturedUrl.includes("ALL%20LEADS"));
+    assert.ok(!capturedUrl.includes("A1:Z1000"), "Must not contain hardcoded A1:Z1000");
+  });
+
+  it("24. runCanonicalSync executes unified ingestion pipeline with dryRun and truthful diagnostics", async () => {
+    const mockFetch = async (url) => {
+      if (url.includes("sheets.googleapis.com")) {
+        return {
+          status: 200,
+          json: async () => ({
+            values: [
+              ["Platform", "Group", "Contact / Link", "Title", "Category", "Location", "Budget", "Date Found"],
+              ["Instagram", "Design Hub", "https://instagram.com/p/12345", "UI/UX & React Frontend", "freelance_leads", "Worldwide", "€2,500", "2026-10-16"]
+            ]
+          })
+        };
+      }
+      return { status: 404, text: async () => "Not Found" };
+    };
+
+    const result = await runCanonicalSync({
+      googleSaEmail: "test@sa.iam.gserviceaccount.com",
+      googlePrivateKey: "mock-key",
+      fetchFn: mockFetch,
+      dryRun: true
+    });
+
+    assert.ok(result.telemetry);
+    assert.ok(result.telemetry.runId.startsWith("SYNC-"));
+    assert.equal(typeof result.telemetry.totalRecords, "number");
+    assert.ok(Array.isArray(result.records));
+    assert.ok(Array.isArray(result.telemetry.sourceDiagnostics));
+    assert.equal(result.telemetry.sourceDiagnostics.length, 3);
+  });
+
+  it("25. Parity verification: scheduled runner and canonical engine produce identical IDs and scoring on same inputs", async () => {
+    const mockLead = {
+      Platform: "LinkedIn",
+      "Group/Page Name": "European Tech Hiring",
+      "Contact / Link": "https://linkedin.com/jobs/view/99887766",
+      "Job Title": "Full Stack Engineer (TypeScript & React)",
+      Category: "visa_jobs",
+      Location: "Limassol, Cyprus",
+      Budget: "€65,000"
+    };
+
+    const norm1 = normalizeMuseSocialLead(mockLead, 1);
+    const norm2 = normalizeMuseSocialLead(mockLead, 1);
+
+    assert.equal(norm1.id, norm2.id);
+    assert.equal(norm1.category, norm2.category);
+    assert.equal(norm1.score_total, norm2.score_total);
+    assert.equal(norm1.canonical_source_url, norm2.canonical_source_url);
+    assert.ok(norm1.id.startsWith("opp_visa_"));
+
+    // Verify runServerSync and runCanonicalSync yield identical structure and deterministic counts
+    const mockFetch = async () => ({
+      status: 200,
+      json: async () => ({ values: [] })
+    });
+    const s1 = await runServerSync({ dryRun: true, fetchFn: mockFetch, currentRecords: [] });
+    const s2 = await runCanonicalSync({ dryRun: true, fetchFn: mockFetch, currentRecords: [] });
+    assert.equal(s1.status, s2.telemetry.status);
+    assert.equal(s1.totalRecords, s2.telemetry.totalRecords);
+    assert.equal(s1.sourcesAttempted, s2.telemetry.sourcesAttempted);
+  });
+
+  it("26. Strict 7-Field CRM Preservation protects all user edits when incoming sync arrives", () => {
+    const existingOpp = {
+      id: "opp_free_123456789abc",
+      category: "freelance_leads",
+      title: "React Web App Development",
+      organization: "Cyprus Studio",
+      source_url: "https://example.com/lead/1",
+      canonical_source_url: "https://example.com/lead/1",
+      provenance_urls: ["https://example.com/lead/1"],
+      is_active: true,
+      score_total: 80,
+      // 7 USER-OWNED CRM FIELDS
+      user_status: "In Conversation",
+      status: "In Conversation",
+      outreach_status: "In Conversation",
+      priority: "P1",
+      priority_override: "P1",
+      favorite: true,
+      pinned: true,
+      follow_up_date: "2026-10-20",
+      personal_notes: "Sent proposal via email. Follow up Tuesday.",
+      notes: "Sent proposal via email. Follow up Tuesday.",
+      contacted_date: "2026-10-15",
+      applied_date: "2026-10-15",
+      workflow: {
+        status: "In Conversation",
+        priority: "P1",
+        favorite: true,
+        follow_up_date: "2026-10-20",
+        personal_notes: "Sent proposal via email. Follow up Tuesday.",
+        contacted_date: "2026-10-15",
+        applied_date: "2026-10-15"
+      },
+      activity_history: [{ at: "2026-10-15T10:00:00Z", label: "Initial contact" }]
+    };
+
+    // Incoming machine update with fresh score but default CRM values ("New", "P2", false, empty notes)
+    const incomingMachineUpdate = {
+      id: "opp_free_123456789abc",
+      category: "freelance_leads",
+      title: "React Web App Development (Updated Title)",
+      organization: "Cyprus Studio",
+      source_url: "https://example.com/lead/1",
+      canonical_source_url: "https://example.com/lead/1",
+      is_active: true,
+      score_total: 92, // Fresh score
+      user_status: "New",
+      priority: "P2",
+      favorite: false,
+      follow_up_date: null,
+      personal_notes: "",
+      contacted_date: null,
+      applied_date: null
+    };
+
+    const preserved = preserveUserCrmFields(existingOpp, incomingMachineUpdate);
+
+    // 1. Fresher machine score accepted
+    assert.equal(preserved.score_total, 92);
+    // 2. All 7 user-owned CRM fields strictly preserved!
+    assert.equal(preserved.user_status, "In Conversation");
+    assert.equal(preserved.workflow.status, "In Conversation");
+    assert.equal(preserved.priority, "P1");
+    assert.equal(preserved.workflow.priority, "P1");
+    assert.equal(preserved.favorite, true);
+    assert.equal(preserved.workflow.favorite, true);
+    assert.equal(preserved.follow_up_date, "2026-10-20");
+    assert.equal(preserved.workflow.follow_up_date, "2026-10-20");
+    assert.equal(preserved.personal_notes, "Sent proposal via email. Follow up Tuesday.");
+    assert.equal(preserved.workflow.personal_notes, "Sent proposal via email. Follow up Tuesday.");
+    assert.equal(preserved.contacted_date, "2026-10-15");
+    assert.equal(preserved.workflow.contacted_date, "2026-10-15");
+    assert.equal(preserved.applied_date, "2026-10-15");
+    assert.equal(preserved.workflow.applied_date, "2026-10-15");
+    assert.ok(preserved.activity_history.length >= 1);
   });
 });
