@@ -20,8 +20,20 @@ import {
 import {
   DATA_SOURCE_REGISTRY,
   getDataSourcesByCategory,
+  getDataSourcesByAgent,
   getNextScheduledSync
 } from "../src/config/dataSources.mjs";
+import {
+  AGENT_REGISTRY,
+  getAgents,
+  getAgentById,
+  getAgentForSource
+} from "../src/config/agentRegistry.mjs";
+import {
+  formatCategoryName,
+  formatStatusName,
+  formatPriorityLabel
+} from "../src/lib/formatters.mjs";
 
 import {
   fetchSheetValues,
@@ -250,21 +262,21 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
     }
   });
 
-  it("15. getNextScheduledSync calculates exact intervals in 00, 06, 12, 18 UTC sequence", () => {
+  it("15. getNextScheduledSync calculates exact intervals in 5-hour 00, 05, 10, 15, 20 UTC sequence", () => {
     const t1 = new Date("2026-10-15T02:30:00Z");
     const next1 = getNextScheduledSync(t1);
-    assert.equal(next1.formattedUtc, "06:00 UTC");
-    assert.equal(next1.minutesRemaining, 210);
+    assert.equal(next1.formattedUtc, "05:00 UTC");
+    assert.equal(next1.minutesRemaining, 150);
 
-    const t2 = new Date("2026-10-15T06:00:00Z");
+    const t2 = new Date("2026-10-15T05:00:00Z");
     const next2 = getNextScheduledSync(t2);
-    assert.equal(next2.formattedUtc, "06:00 UTC");
+    assert.equal(next2.formattedUtc, "05:00 UTC");
     assert.equal(next2.minutesRemaining, 0);
 
-    const t3 = new Date("2026-10-15T19:45:00Z");
+    const t3 = new Date("2026-10-15T21:45:00Z");
     const next3 = getNextScheduledSync(t3);
     assert.equal(next3.formattedUtc, "00:00 UTC");
-    assert.equal(next3.minutesRemaining, 255);
+    assert.equal(next3.minutesRemaining, 135);
   });
 
   it("16. Google Sheets API v4 adapter parses values and maps 2D rows to structured objects", async () => {
@@ -680,8 +692,8 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
       status: 200,
       json: async () => ({ values: [] })
     });
-    const s1 = await runServerSync({ dryRun: true, fetchFn: mockFetch, currentRecords: [] });
-    const s2 = await runCanonicalSync({ dryRun: true, fetchFn: mockFetch, currentRecords: [] });
+    const s1 = await runServerSync({ dryRun: true, fetchFn: mockFetch, currentRecords: [], neonDatabaseUrl: null, supabaseUrl: null });
+    const s2 = await runCanonicalSync({ dryRun: true, fetchFn: mockFetch, currentRecords: [], neonDatabaseUrl: null, supabaseUrl: null });
     assert.equal(s1.status, s2.telemetry.status);
     assert.equal(s1.totalRecords, s2.telemetry.totalRecords);
     assert.equal(s1.sourcesAttempted, s2.telemetry.sourcesAttempted);
@@ -762,5 +774,162 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
     assert.equal(preserved.applied_date, "2026-10-15");
     assert.equal(preserved.workflow.applied_date, "2026-10-15");
     assert.ok(preserved.activity_history.length >= 1);
+  });
+
+  it("27. AI Agent Registry contains 5 distinct autonomous research agents with correct pipeline bindings", () => {
+    const agents = getAgents();
+    assert.equal(agents.length, 5);
+
+    const ids = agents.map((a) => a.id);
+    assert.deepEqual(ids, ["sandy_muse", "haya_muse_1", "haya_muse_2", "vargo_spark", "katoo_spark"]);
+
+    assert.equal(AGENT_REGISTRY.length, 5);
+    assert.equal(getAgents().length, 5);
+    assert.equal(getAgentForSource("muse_social_job_hunter")?.id, "sandy_muse");
+
+    const sandy = getAgentById("sandy_muse");
+    assert.equal(sandy.name, "Sandy Muse");
+    assert.ok(sandy.assignedPipelines.includes("freelance_leads"));
+    assert.ok(sandy.connectedSources.includes("muse_social_job_hunter"));
+
+    const haya1 = getAgentById("haya_muse_1");
+    assert.equal(haya1.name, "Haya Muse 1");
+    assert.ok(haya1.assignedPipelines.includes("visa_jobs"));
+    assert.ok(haya1.connectedSources.includes("master_job_application_tracker"));
+
+    const haya2 = getAgentById("haya_muse_2");
+    assert.equal(haya2.name, "Haya Muse 2");
+    assert.ok(haya2.assignedPipelines.includes("masters_scholarships"));
+    assert.ok(haya2.connectedSources.includes("masters_workbook"));
+
+    const vargo = getAgentById("vargo_spark");
+    assert.equal(vargo.name, "Vargo Spark");
+    assert.ok(vargo.connectedSources.includes("local_agencies_final"));
+
+    const katoo = getAgentById("katoo_spark");
+    assert.equal(katoo.name, "Katoo Spark");
+    assert.ok(katoo.assignedPipelines.includes("remote_jobs"));
+  });
+
+  it("28. Multi-agent provenance tracking preserves discovering agents and merges multiple discoveries", () => {
+    // Lead discovered first by Sandy Muse from ALL LEADS
+    const lead1 = normalizeMuseSocialLead({
+      "Platform": "Facebook",
+      "Group/Page Name": "Cyprus Developers",
+      "Post Text / Lead Description": "Senior or Junior frontend React developer needed for portal overhaul",
+      "Contact / Link": "https://facebook.com/groups/cyprusdev/posts/9991",
+      "Category / Role": "Freelance Lead",
+      "Date Found": "2026-10-16",
+      "Location": "Limassol, Cyprus",
+      "Budget": "€3,000"
+    }, 0);
+
+    assert.equal(lead1.discovered_by_agent, "sandy_muse");
+    assert.equal(lead1.agent_provenance.length, 1);
+    assert.equal(lead1.agent_provenance[0].agentName, "Sandy Muse");
+    assert.equal(lead1.agent_provenance[0].sourceTab, "ALL LEADS");
+
+    // Same listing discovered later by Haya Muse 1 in Master Tracker
+    const lead2 = normalizeMasterJobTrackerRow({
+      "Company": "Cyprus Developers",
+      "Position": "Senior or Junior frontend React developer needed for portal overhaul",
+      "Application Link": "https://facebook.com/groups/cyprusdev/posts/9991",
+      "Location": "Limassol, Cyprus",
+      "Notes": "Also tracked via Facebook application queue"
+    }, 1);
+
+    assert.equal(lead2.discovered_by_agent, "haya_muse_1");
+    assert.equal(lead2.agent_provenance[0].agentName, "Haya Muse 1");
+
+    // Merge through normalizeAndMergeRecords
+    const { processed } = normalizeAndMergeRecords([lead2], [lead1]);
+    assert.equal(processed.length, 1, "Duplicate listing should be merged into one canonical opportunity");
+
+    const merged = processed[0];
+    assert.equal(merged.agent_provenance.length, 2, "Merged opportunity must retain provenance from BOTH discovering agents");
+    assert.equal(merged.agent_provenance[0].agentId, "sandy_muse");
+    assert.equal(merged.agent_provenance[1].agentId, "haya_muse_1");
+  });
+
+  it("29. Data Sources Registry links all resources to owning agents with detailed metrics", () => {
+    const sandySources = getDataSourcesByAgent("sandy_muse");
+    assert.ok(sandySources.some((s) => s.id === "muse_social_job_hunter"));
+
+    const haya1Sources = getDataSourcesByAgent("haya_muse_1");
+    assert.ok(haya1Sources.some((s) => s.id === "master_job_application_tracker"));
+
+    const haya2Sources = getDataSourcesByAgent("haya_muse_2");
+    assert.ok(haya2Sources.some((s) => s.id === "masters_workbook"));
+
+    // Every connected source must have metric count fields defined
+    for (const src of DATA_SOURCE_REGISTRY) {
+      if (src.syncEnabled) {
+        assert.equal(typeof src.recordsFetched, "number");
+        assert.equal(typeof src.recordsParsed, "number");
+        assert.equal(typeof src.recordsAccepted, "number");
+        assert.equal(typeof src.canonicalRecords, "number");
+      }
+    }
+  });
+
+  it("30. buildTodayPriorityQueue NEVER assigns 'Follow Up' to records with CRM status 'New'", () => {
+    const queue = buildTodayPriorityQueue(seedData.opportunities, "2026-10-14");
+    for (const item of queue) {
+      const status = item.workflow?.status || item.user_status || "New";
+      if (status === "New") {
+        assert.notEqual(
+          item.action_badge,
+          "Follow Up",
+          `Opportunity ${item.id} with status 'New' should never be assigned 'Follow Up'!`
+        );
+        assert.ok(
+          ["Contact Lead", "Review Lead", "Review Role", "Review Programme", "Check Eligibility", "Prepare Submission", "Review Deadline"].includes(
+            item.action_badge
+          ),
+          `Opportunity ${item.id} action '${item.action_badge}' must be a valid first-touch action`
+        );
+        assert.ok(
+          typeof item.action_reason === "string" && item.action_reason.length > 0,
+          `Opportunity ${item.id} must include an informative action_reason`
+        );
+      }
+    }
+  });
+
+  it("31. formatCategoryName maps internal database enums to clean enterprise labels", () => {
+    assert.equal(formatCategoryName("freelance_leads"), "Freelance");
+    assert.equal(formatCategoryName("visa_jobs"), "Visa / Cyprus Jobs");
+    assert.equal(formatCategoryName("remote_jobs"), "Remote EMEA");
+    assert.equal(formatCategoryName("masters_scholarships"), "Master’s & Scholarships");
+    assert.equal(formatCategoryName("all"), "All Pipelines");
+    assert.equal(formatCategoryName(null), "Uncategorized");
+    assert.equal(formatStatusName("Preparing"), "Preparing Application");
+    assert.equal(formatPriorityLabel("P0"), "P0 · Urgent");
+  });
+
+  it("32. Deduplication check: deduplicateOpportunities merges duplicate records while preserving CRM state", () => {
+    const dups = [
+      {
+        id: "TEST-1",
+        category: "visa_jobs",
+        organization: "Wargaming",
+        title: "Frontend Engineer",
+        source_url: "https://wargaming.com/jobs/1",
+        user_status: "Preparing",
+        personal_notes: "Sandeep personal CV prepared"
+      },
+      {
+        id: "TEST-2",
+        category: "visa_jobs",
+        organization: "Wargaming",
+        title: "Frontend Engineer (Cyprus)",
+        source_url: "https://wargaming.com/jobs/1?utm_source=facebook",
+        user_status: "New"
+      }
+    ];
+    const { deduplicated, mergedCount } = deduplicateOpportunities(dups);
+    assert.equal(deduplicated.length, 1);
+    assert.equal(mergedCount, 1);
+    assert.equal(deduplicated[0].provenance_urls.length, 2);
   });
 });

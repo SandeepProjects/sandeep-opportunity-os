@@ -18,10 +18,37 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const seedPath = path.resolve(__dirname, "../src/data/verified_seed_24.json");
 
 export async function runServerSync(options = {}) {
-  const googleSaEmail = options.googleSaEmail || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const googlePrivateKey = options.googlePrivateKey || process.env.GOOGLE_PRIVATE_KEY;
-  const supabaseUrl = options.supabaseUrl || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = options.supabaseKey || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // Read .env.local if present
+  const envLocalPath = path.resolve(__dirname, "../.env.local");
+  let envDbUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+  if (!envDbUrl && fs.existsSync(envLocalPath)) {
+    const lines = fs.readFileSync(envLocalPath, "utf8").split("\n");
+    for (const l of lines) {
+      const match = l.match(/^DATABASE_URL=(.+)$/);
+      if (match) {
+        envDbUrl = match[1].trim();
+        break;
+      }
+    }
+  }
+
+  // Load Google service account if not in process.env
+  let googleSaEmail = options.googleSaEmail || process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  let googlePrivateKey = options.googlePrivateKey || process.env.GOOGLE_PRIVATE_KEY;
+  const saPath = path.resolve(__dirname, "../.secrets/google-sa-key.json");
+  if ((!googleSaEmail || !googlePrivateKey) && fs.existsSync(saPath)) {
+    try {
+      const sa = JSON.parse(fs.readFileSync(saPath, "utf8"));
+      googleSaEmail = googleSaEmail || sa.client_email;
+      googlePrivateKey = googlePrivateKey || sa.private_key;
+    } catch {
+      // Ignore
+    }
+  }
+
+  const neonDatabaseUrl = options.neonDatabaseUrl !== undefined ? options.neonDatabaseUrl : envDbUrl;
+  const supabaseUrl = options.supabaseUrl !== undefined ? options.supabaseUrl : (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL);
+  const supabaseKey = options.supabaseKey !== undefined ? options.supabaseKey : process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   // Load baseline seed profile & opportunities (bootstrap/fallback)
   let seed = { opportunities: [], candidate_profile: {} };
@@ -43,6 +70,7 @@ export async function runServerSync(options = {}) {
     googlePrivateKey,
     supabaseUrl,
     supabaseKey,
+    neonDatabaseUrl,
     currentRecords,
     fetchFn,
     dryRun: Boolean(options.dryRun)

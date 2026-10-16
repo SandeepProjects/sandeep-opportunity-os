@@ -1,3 +1,5 @@
+import type { AgentProvenance, AgentId } from "./agent";
+
 export type PipelineCategory =
   | "freelance_leads"
   | "visa_jobs"
@@ -96,6 +98,8 @@ export interface OpportunityRecord {
   location: string;
   source_url: string;
   provenance_urls?: string[];
+  agent_provenance?: AgentProvenance[];
+  discovered_by_agent?: AgentId;
   last_verified_at: string;
   deadline?: string | null;
   is_active: boolean;
@@ -123,6 +127,7 @@ export interface OpportunityRecord {
   /** Legacy import alias; prefer activity_history in application code. */
   history?: ActivityEvent[];
   action_badge?: string;
+  action_reason?: string;
   follow_up_bucket?: FollowUpBucket;
   queue_priority_score?: number;
 }

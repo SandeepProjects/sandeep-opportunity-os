@@ -365,6 +365,21 @@ export function normalizeMuseSocialLead(row, index = 0) {
     source_url: rawUrl || "",
     canonical_source_url: canonUrl,
     provenance_urls: rawUrl ? [rawUrl] : [],
+    discovered_by_agent: "sandy_muse",
+    agent_provenance: [
+      {
+        agentId: "sandy_muse",
+        agentName: "Sandy Muse",
+        sourceId: "muse_social_job_hunter",
+        sourceName: "MUSE | FACEBOOK & INSTAGRAM JOB HUNTER",
+        sourceTab: "ALL LEADS",
+        sourceRowRef: `Row ${index + 2}`,
+        sourceUrl: rawUrl || canonUrl || "",
+        firstSeenAt: dateFound,
+        lastSeenAt: dateFound,
+        lastVerifiedAt: dateFound
+      }
+    ],
     last_verified_at: dateFound,
     deadline: null,
     is_active: true,
@@ -397,7 +412,22 @@ export function normalizeMuseSocialLead(row, index = 0) {
       platform,
       public_contact: groupOrPage,
       outreach_hook: rawTitle.length > 120 ? rawTitle.slice(0, 300) + "..." : rawTitle,
-      budget_indicator: compensation || undefined
+      budget_indicator: compensation || undefined,
+      discovered_by_agent: "sandy_muse",
+      agent_provenance: [
+        {
+          agentId: "sandy_muse",
+          agentName: "Sandy Muse",
+          sourceId: "muse_social_job_hunter",
+          sourceName: "MUSE | FACEBOOK & INSTAGRAM JOB HUNTER",
+          sourceTab: "ALL LEADS",
+          sourceRowRef: `Row ${index + 2}`,
+          sourceUrl: rawUrl || canonUrl || "",
+          firstSeenAt: dateFound,
+          lastSeenAt: dateFound,
+          lastVerifiedAt: dateFound
+        }
+      ]
     },
     user_status: "New",
     priority: "P2",
@@ -421,11 +451,12 @@ export function normalizeMuseSocialLead(row, index = 0) {
 
 export function normalizeMasterJobTrackerRow(row, index = 0) {
   const company = getFirstVal(row, ["Company", "Organization", "Employer", "Company Name"]) || "Company";
-  const title = getFirstVal(row, ["Position", "Role", "Job Title", "Title", "Opportunity"]) || "Engineering Role";
-  const rawUrl = getFirstVal(row, ["Application Link", "URL", "Link", "Job URL", "Source Link"]);
+  const title = getFirstVal(row, ["Role / Job Title", "Position", "Role", "Job Title", "Title", "Opportunity"]) || "Engineering Role";
+  const rawUrl = getFirstVal(row, ["URL / Job Link", "Application Link", "URL", "Link", "Job URL", "Source Link"]);
   const canonUrl = canonicalizeUrl(rawUrl);
 
   const loc = getFirstVal(row, ["Location", "Country", "Workplace Type", "City"]) || "Cyprus / Remote";
+  const salary = getFirstVal(row, ["Salary / Rate", "Salary", "Rate", "Budget", "Compensation", "Pay"]);
   const notes = getFirstVal(row, ["Notes", "Personal Notes", "Comments", "Status Notes"]);
   const dateApplied = getFirstVal(row, ["Date Applied", "Applied Date", "Application Date"]);
   const categoryHint = getFirstVal(row, ["Category", "Type", "Track"]).toLowerCase();
@@ -450,6 +481,21 @@ export function normalizeMasterJobTrackerRow(row, index = 0) {
     source_url: rawUrl || "",
     canonical_source_url: canonUrl,
     provenance_urls: rawUrl ? [rawUrl] : [],
+    discovered_by_agent: "haya_muse_1",
+    agent_provenance: [
+      {
+        agentId: "haya_muse_1",
+        agentName: "Haya Muse 1",
+        sourceId: "master_job_application_tracker",
+        sourceName: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
+        sourceTab: categoryHint || "All Applications",
+        sourceRowRef: `Row ${index + 2}`,
+        sourceUrl: rawUrl || canonUrl || "",
+        firstSeenAt: dateApplied || new Date().toISOString().slice(0, 10),
+        lastSeenAt: dateApplied || new Date().toISOString().slice(0, 10),
+        lastVerifiedAt: dateApplied || new Date().toISOString().slice(0, 10)
+      }
+    ],
     last_verified_at: new Date().toISOString().slice(0, 10),
     deadline: null,
     is_active: true,
@@ -477,7 +523,23 @@ export function normalizeMasterJobTrackerRow(row, index = 0) {
     details: {
       company,
       location: loc,
-      notes: notes || undefined
+      salary_range: salary || undefined,
+      notes: notes || undefined,
+      discovered_by_agent: "haya_muse_1",
+      agent_provenance: [
+        {
+          agentId: "haya_muse_1",
+          agentName: "Haya Muse 1",
+          sourceId: "master_job_application_tracker",
+          sourceName: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
+          sourceTab: categoryHint || "All Applications",
+          sourceRowRef: `Row ${index + 2}`,
+          sourceUrl: rawUrl || canonUrl || "",
+          firstSeenAt: dateApplied || new Date().toISOString().slice(0, 10),
+          lastSeenAt: dateApplied || new Date().toISOString().slice(0, 10),
+          lastVerifiedAt: dateApplied || new Date().toISOString().slice(0, 10)
+        }
+      ]
     },
     user_status: dateApplied ? "Applied" : "New",
     priority: "P2",
@@ -521,6 +583,21 @@ export function normalizeMasterProgrammeRow(row, index = 0) {
     source_url: rawUrl || "",
     canonical_source_url: canonUrl,
     provenance_urls: rawUrl ? [rawUrl] : [],
+    discovered_by_agent: "haya_muse_2",
+    agent_provenance: [
+      {
+        agentId: "haya_muse_2",
+        agentName: "Haya Muse 2",
+        sourceId: "masters_workbook",
+        sourceName: "master-spreadsheet.xlsx",
+        sourceTab: "MASTER_PROGRAMMES",
+        sourceRowRef: `Row ${index + 2}`,
+        sourceUrl: rawUrl || canonUrl || "",
+        firstSeenAt: new Date().toISOString().slice(0, 10),
+        lastSeenAt: new Date().toISOString().slice(0, 10),
+        lastVerifiedAt: new Date().toISOString().slice(0, 10)
+      }
+    ],
     last_verified_at: new Date().toISOString().slice(0, 10),
     deadline: deadline || null,
     is_active: true,
@@ -551,7 +628,22 @@ export function normalizeMasterProgrammeRow(row, index = 0) {
     ],
     details: {
       degree_level: "Master",
-      tuition_fee: tuition || undefined
+      tuition_fee: tuition || undefined,
+      discovered_by_agent: "haya_muse_2",
+      agent_provenance: [
+        {
+          agentId: "haya_muse_2",
+          agentName: "Haya Muse 2",
+          sourceId: "masters_workbook",
+          sourceName: "master-spreadsheet.xlsx",
+          sourceTab: "MASTER_PROGRAMMES",
+          sourceRowRef: `Row ${index + 2}`,
+          sourceUrl: rawUrl || canonUrl || "",
+          firstSeenAt: new Date().toISOString().slice(0, 10),
+          lastSeenAt: new Date().toISOString().slice(0, 10),
+          lastVerifiedAt: new Date().toISOString().slice(0, 10)
+        }
+      ]
     },
     user_status: "New",
     priority: "P2",
@@ -594,6 +686,21 @@ export function normalizeScholarshipRow(row, index = 0) {
     source_url: rawUrl || "",
     canonical_source_url: canonUrl,
     provenance_urls: rawUrl ? [rawUrl] : [],
+    discovered_by_agent: "haya_muse_2",
+    agent_provenance: [
+      {
+        agentId: "haya_muse_2",
+        agentName: "Haya Muse 2",
+        sourceId: "masters_workbook",
+        sourceName: "master-spreadsheet.xlsx",
+        sourceTab: "SCHOLARSHIPS",
+        sourceRowRef: `Row ${index + 2}`,
+        sourceUrl: rawUrl || canonUrl || "",
+        firstSeenAt: new Date().toISOString().slice(0, 10),
+        lastSeenAt: new Date().toISOString().slice(0, 10),
+        lastVerifiedAt: new Date().toISOString().slice(0, 10)
+      }
+    ],
     last_verified_at: new Date().toISOString().slice(0, 10),
     deadline: deadline || null,
     is_active: true,
@@ -620,7 +727,22 @@ export function normalizeScholarshipRow(row, index = 0) {
     ],
     details: {
       program_name: name,
-      tuition_and_coverage: coverage || undefined
+      tuition_and_coverage: coverage || undefined,
+      discovered_by_agent: "haya_muse_2",
+      agent_provenance: [
+        {
+          agentId: "haya_muse_2",
+          agentName: "Haya Muse 2",
+          sourceId: "masters_workbook",
+          sourceName: "master-spreadsheet.xlsx",
+          sourceTab: "SCHOLARSHIPS",
+          sourceRowRef: `Row ${index + 2}`,
+          sourceUrl: rawUrl || canonUrl || "",
+          firstSeenAt: new Date().toISOString().slice(0, 10),
+          lastSeenAt: new Date().toISOString().slice(0, 10),
+          lastVerifiedAt: new Date().toISOString().slice(0, 10)
+        }
+      ]
     },
     user_status: "New",
     priority: "P2",
@@ -733,12 +855,37 @@ export function preserveUserCrmFields(existing, incoming) {
   ]);
   const combinedProvenance = Array.from(urls).filter(Boolean);
 
+  const rawAgentProv = [
+    ...(Array.isArray(existing.agent_provenance) ? existing.agent_provenance : []),
+    ...(Array.isArray(existing.details?.agent_provenance) ? existing.details.agent_provenance : []),
+    ...(Array.isArray(incoming.agent_provenance) ? incoming.agent_provenance : []),
+    ...(Array.isArray(incoming.details?.agent_provenance) ? incoming.details.agent_provenance : [])
+  ];
+  const seenAgentProv = new Set();
+  const combinedAgentProvenance = [];
+  for (const ap of rawAgentProv) {
+    if (!ap || !ap.agentId) continue;
+    const key = `${ap.agentId}::${ap.sourceId}::${ap.sourceTab || ""}`;
+    if (!seenAgentProv.has(key)) {
+      seenAgentProv.add(key);
+      combinedAgentProvenance.push(ap);
+    }
+  }
+
+  const primaryAgent =
+    existing.discovered_by_agent ||
+    incoming.discovered_by_agent ||
+    combinedAgentProvenance[0]?.agentId ||
+    "sandy_muse";
+
   return {
     ...incoming,
     id: existing.id || incoming.id,
     source_url: existing.source_url || incoming.source_url,
     canonical_source_url: existing.canonical_source_url || incoming.canonical_source_url,
     provenance_urls: combinedProvenance,
+    discovered_by_agent: primaryAgent,
+    agent_provenance: combinedAgentProvenance,
 
     // Machine fields from incoming
     score_total: incoming.score_total !== undefined ? incoming.score_total : existing.score_total,
@@ -917,6 +1064,7 @@ export function normalizeAndMergeRecords(incomingRaw, existingRecords = []) {
 
   return {
     merged: processed,
+    processed,
     addedCount,
     updatedCount,
     preservedCount,
@@ -927,7 +1075,7 @@ export function normalizeAndMergeRecords(incomingRaw, existingRecords = []) {
 }
 
 export function getNextScheduledSync(referenceDate = new Date()) {
-  const intervalsUtc = [0, 6, 12, 18];
+  const intervalsUtc = [0, 5, 10, 15, 20];
   const ref = new Date(referenceDate);
   const currentHourUtc = ref.getUTCHours();
   const currentMinUtc = ref.getUTCMinutes();
@@ -964,6 +1112,7 @@ export async function runCanonicalSync({
   googlePrivateKey,
   supabaseUrl,
   supabaseKey,
+  neonDatabaseUrl,
   currentRecords = [],
   fetchFn = globalThis.fetch,
   dryRun = false
@@ -1201,8 +1350,80 @@ export async function runCanonicalSync({
     }
   }
 
-  // 5. Fetch existing records from Supabase to preserve CRM state
+  // 5. Fetch existing records from Neon or Supabase to preserve CRM state
   let existingRecords = [...currentRecords];
+  let neonSql = null;
+  if (neonDatabaseUrl) {
+    try {
+      const { neon } = await import("@neondatabase/serverless");
+      neonSql = neon(neonDatabaseUrl);
+    } catch {
+      // Continue without neon
+    }
+  }
+
+  if (neonSql) {
+    try {
+      const neonOpps = await neonSql`
+        SELECT o.*,
+          json_build_object(
+            'status', w.status,
+            'priority', w.priority,
+            'favorite', w.favorite,
+            'follow_up_date', w.follow_up_date,
+            'personal_notes', w.personal_notes,
+            'contacted_date', w.contacted_date,
+            'applied_date', w.applied_date,
+            'updated_at', w.updated_at
+          ) as workflow
+        FROM public.opportunities o
+        LEFT JOIN public.workflow_states w ON o.id = w.opportunity_id;
+      `;
+      if (Array.isArray(neonOpps) && neonOpps.length > 0) {
+        const dbMap = new Map(neonOpps.map((d) => [d.id, d]));
+        const combined = existingRecords.map((s) => {
+          const dbMatch = dbMap.get(s.id);
+          if (dbMatch) {
+            dbMap.delete(s.id);
+            const wf = dbMatch.workflow || {};
+            return {
+              ...s,
+              ...dbMatch,
+              user_status: wf.status || s.user_status || "New",
+              status: wf.status || s.status || "New",
+              priority: wf.priority || s.priority || "P2",
+              favorite: wf.favorite ?? s.favorite ?? false,
+              follow_up_date: wf.follow_up_date ?? s.follow_up_date ?? null,
+              personal_notes: wf.personal_notes ?? s.personal_notes ?? "",
+              contacted_date: wf.contacted_date ?? s.contacted_date ?? null,
+              applied_date: wf.applied_date ?? s.applied_date ?? null,
+              workflow: wf
+            };
+          }
+          return s;
+        });
+        for (const remaining of dbMap.values()) {
+          const wf = remaining.workflow || {};
+          combined.push({
+            ...remaining,
+            user_status: wf.status || remaining.user_status || "New",
+            status: wf.status || remaining.status || "New",
+            priority: wf.priority || remaining.priority || "P2",
+            favorite: wf.favorite ?? remaining.favorite ?? false,
+            follow_up_date: wf.follow_up_date ?? remaining.follow_up_date ?? null,
+            personal_notes: wf.personal_notes ?? remaining.personal_notes ?? "",
+            contacted_date: wf.contacted_date ?? remaining.contacted_date ?? null,
+            applied_date: wf.applied_date ?? remaining.applied_date ?? null,
+            workflow: wf
+          });
+        }
+        existingRecords = combined;
+      }
+    } catch (err) {
+      console.warn("[CanonicalSync] Baseline fetch from Neon:", err.message);
+    }
+  }
+
   if (supabaseUrl && supabaseKey) {
     try {
       const dbRes = await fetchFn(
@@ -1296,6 +1517,165 @@ export async function runCanonicalSync({
     : sourceDiagnostics.some((s) => s.status === "Connected")
     ? "PARTIAL"
     : "FAILED";
+
+  // 7a. Neon PostgreSQL Upsert
+  let neonSynced = false;
+  let neonMessage = "Neon database not configured";
+
+  if (neonSql && !dryRun) {
+    try {
+      const batchSize = 500;
+      for (let i = 0; i < mergeResult.merged.length; i += batchSize) {
+        const batch = mergeResult.merged.slice(i, i + batchSize);
+        const oppRows = batch.map((o) => {
+          const canonicalUrl = canonicalizeUrl(o.source_url) || o.source_url;
+          const orgName = o.organization || (o.details && o.details.company) || "Direct Lead";
+          const fp = o.fingerprint || computeFingerprint(o);
+          let agentId = o.discovered_by_agent;
+          if (!agentId) {
+            if (o.category === "freelance_leads") agentId = "sandy_muse";
+            else if (o.category === "visa_jobs") agentId = "haya_muse_1";
+            else if (o.category === "masters_scholarships") agentId = "haya_muse_2";
+            else if (o.category === "remote_jobs") agentId = "katoo_spark";
+            else agentId = "sandy_muse";
+          }
+          return {
+            id: o.id,
+            owner_id: o.owner_id || null,
+            category: o.category,
+            title: o.title,
+            organization: orgName,
+            organization_id: o.organization_id || null,
+            location: o.location || "Cyprus / Remote",
+            country: o.country || null,
+            source_url: o.source_url,
+            canonical_url: canonicalUrl,
+            fingerprint: fp,
+            source_type: o.source_type || "INGESTION_SCAN",
+            discovered_by_agent: agentId,
+            first_seen_at: o.retrieved_at || o.created_at || startedAt.toISOString(),
+            last_seen_at: startedAt.toISOString(),
+            last_verified_at: o.last_verified_at || startedAt.toISOString(),
+            confidence: String(o.confidence || "MEDIUM").toUpperCase(),
+            is_active: Boolean(o.is_active),
+            score_total: o.score_total || 0,
+            score_components: o.score_components || {},
+            score_explanation: o.score_explanation || {},
+            details: o.details || {},
+            deadline: o.deadline || null,
+            provenance_urls: o.provenance_urls || [o.source_url],
+            agent_provenance: o.agent_provenance || [{ agent_id: agentId, first_seen: startedAt.toISOString() }],
+            created_at: o.created_at || startedAt.toISOString()
+          };
+        });
+
+        await neonSql.query(`
+          INSERT INTO public.opportunities (
+            id, owner_id, category, title, organization, organization_id,
+            location, country, source_url, canonical_url, fingerprint,
+            source_type, discovered_by_agent, first_seen_at, last_seen_at,
+            last_verified_at, confidence, is_active, score_total,
+            score_components, score_explanation, details, deadline,
+            provenance_urls, agent_provenance, created_at, updated_at
+          )
+          SELECT 
+            id, owner_id, category, title, organization, organization_id,
+            location, country, source_url, canonical_url, fingerprint,
+            source_type, discovered_by_agent, first_seen_at, last_seen_at,
+            last_verified_at, confidence, is_active, score_total,
+            score_components, score_explanation, details, deadline,
+            provenance_urls, agent_provenance, created_at, NOW()
+          FROM jsonb_to_recordset($1::jsonb) AS (
+            id text, owner_id uuid, category text, title text, organization text, organization_id text,
+            location text, country text, source_url text, canonical_url text, fingerprint text,
+            source_type text, discovered_by_agent text, first_seen_at timestamptz, last_seen_at timestamptz,
+            last_verified_at timestamptz, confidence text, is_active boolean, score_total integer,
+            score_components jsonb, score_explanation jsonb, details jsonb, deadline text,
+            provenance_urls jsonb, agent_provenance jsonb, created_at timestamptz
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            organization = EXCLUDED.organization,
+            location = EXCLUDED.location,
+            source_url = EXCLUDED.source_url,
+            canonical_url = EXCLUDED.canonical_url,
+            fingerprint = EXCLUDED.fingerprint,
+            score_total = EXCLUDED.score_total,
+            score_components = EXCLUDED.score_components,
+            score_explanation = EXCLUDED.score_explanation,
+            details = EXCLUDED.details,
+            provenance_urls = EXCLUDED.provenance_urls,
+            agent_provenance = EXCLUDED.agent_provenance,
+            last_verified_at = EXCLUDED.last_verified_at,
+            updated_at = NOW();
+        `, [JSON.stringify(oppRows)]);
+
+        const wfRows = batch.map((o) => ({
+          opportunity_id: o.id,
+          owner_id: o.owner_id || null,
+          status: o.workflow?.status || o.user_status || o.status || "New",
+          priority: o.workflow?.priority || o.priority || "P2",
+          favorite: Boolean(o.workflow?.favorite ?? o.favorite ?? false),
+          follow_up_date: o.workflow?.follow_up_date || o.follow_up_date || null,
+          personal_notes: o.workflow?.personal_notes || o.personal_notes || "",
+          contacted_date: o.workflow?.contacted_date || o.contacted_date || null,
+          applied_date: o.workflow?.applied_date || o.applied_date || null,
+          updated_at: startedAt.toISOString()
+        }));
+
+        await neonSql.query(`
+          INSERT INTO public.workflow_states (
+            opportunity_id, owner_id, status, priority, favorite,
+            follow_up_date, personal_notes, contacted_date, applied_date, updated_at
+          )
+          SELECT
+            opportunity_id, owner_id, status, priority, favorite,
+            follow_up_date, personal_notes, contacted_date, applied_date, updated_at
+          FROM jsonb_to_recordset($1::jsonb) AS (
+            opportunity_id text, owner_id uuid, status text, priority text, favorite boolean,
+            follow_up_date date, personal_notes text, contacted_date date, applied_date date, updated_at timestamptz
+          )
+          ON CONFLICT (opportunity_id) DO UPDATE SET
+            status = EXCLUDED.status,
+            priority = EXCLUDED.priority,
+            favorite = EXCLUDED.favorite,
+            follow_up_date = EXCLUDED.follow_up_date,
+            personal_notes = EXCLUDED.personal_notes,
+            contacted_date = EXCLUDED.contacted_date,
+            applied_date = EXCLUDED.applied_date,
+            updated_at = EXCLUDED.updated_at;
+        `, [JSON.stringify(wfRows)]);
+      }
+
+      await neonSql`
+        INSERT INTO public.source_sync_runs (
+          run_id, trigger_type, status, started_at, completed_at, duration_sec,
+          sources_checked, sources_succeeded, sources_failed, raw_count,
+          parsed_count, accepted_count, deduplicated_count, gated_count,
+          inserted_count, updated_count, unchanged_count, user_fields_preserved,
+          telemetry
+        ) VALUES (
+          ${runId}, 'AUTOMATIC_5H', ${overallStatus}, ${startedAt.toISOString()}, NOW(), ${durationSec},
+          ${sourceDiagnostics.length}, ${sourceDiagnostics.filter((s) => s.status === 'Connected').length},
+          ${sourceDiagnostics.filter((s) => s.status !== 'Connected').length},
+          ${newlyIngestedRaw.length}, ${newlyIngestedRaw.length}, ${mergeResult.merged.length},
+          ${Math.max(0, newlyIngestedRaw.length - mergeResult.addedCount)}, ${mergeResult.gatedCount},
+          ${mergeResult.addedCount}, ${mergeResult.updatedCount}, ${mergeResult.unchangedCount},
+          ${mergeResult.preservedCount}, ${JSON.stringify(sourceDiagnostics)}::jsonb
+        )
+        ON CONFLICT (run_id) DO NOTHING;
+      `;
+
+      neonSynced = true;
+      neonMessage = `Successfully synced ${mergeResult.merged.length} opportunities into Neon PostgreSQL.`;
+    } catch (err) {
+      neonMessage = `Neon sync error: ${err.message}`;
+    }
+  }
+
+  // 7b. Supabase Database Upsert & Telemetry Logging
+  supabaseSynced = false;
+  supabaseMessage = "Supabase credentials not configured";
 
   if (supabaseUrl && supabaseKey && !dryRun) {
     try {
@@ -1412,6 +1792,8 @@ export async function runCanonicalSync({
     sourceDiagnostics,
     nextScheduledSyncIso: nextSync.iso,
     nextScheduledSyncUtc: nextSync.formattedUtc,
+    neonSynced,
+    neonMessage,
     supabaseSynced,
     supabaseMessage
   };

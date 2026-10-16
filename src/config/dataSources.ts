@@ -49,6 +49,7 @@ export interface DataSourceResource {
   id: string;
   name: string;
   type: DataSourceType;
+  owningAgentId?: string;
   url: string | null;
   driveId?: string;
   spreadsheetId?: string;
@@ -61,6 +62,12 @@ export interface DataSourceResource {
   lastSuccessfulSync?: string | null;
   lastAttempt?: string | null;
   recordCount?: number | null;
+  recordsFetched?: number;
+  recordsParsed?: number;
+  recordsAccepted?: number;
+  recordsDuplicated?: number;
+  recordsGated?: number;
+  canonicalRecords?: number;
   notes: string;
   verifiedTabs?: string[];
   staleWarning?: string;

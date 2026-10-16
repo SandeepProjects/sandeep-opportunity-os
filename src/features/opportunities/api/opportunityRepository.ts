@@ -1,6 +1,6 @@
 import { supabaseClient, isSupabaseConfigured } from "../../../lib/supabase/client";
 import verifiedSeed from "../../../data/verified_seed_24.json";
-import { applyWorkflowTransition, syncDatabaseToSheetRows } from "../../../engine/core";
+import { applyWorkflowTransition, syncDatabaseToSheetRows, deduplicateOpportunities } from "../../../engine/core";
 import { executeSyncPipeline, loadLatestSyncTelemetry, type SyncTelemetry, type SourceSyncDiagnostic } from "../../../pipeline/syncService";
 import { getNextScheduledSync } from "../../../config/dataSources";
 import { saveCachedOpportunities, getCachedOpportunities } from "../../../lib/cache/opportunityCache";
@@ -27,7 +27,7 @@ function getLatestVerificationTimestamp(records: OpportunityRecord[]): string {
   return timestamps[timestamps.length - 1] || "UNKNOWN";
 }
 
-export type DataSourceMode = "SUPABASE_LIVE" | "SEED_IMPORT_ADAPTER";
+export type DataSourceMode = "NEON_LIVE" | "SUPABASE_LIVE" | "SEED_IMPORT_ADAPTER";
 
 export interface RepositoryState {
   mode: DataSourceMode;
@@ -204,13 +204,16 @@ function mapSupabaseRowsToOpportunities(
 
 export async function getFastCachedState(): Promise<RepositoryState | null> {
   const cached = await getCachedOpportunities();
-  if (!cached || cached.length === 0) return null;
+  const seedOpportunities = (verifiedSeed.opportunities as unknown as OpportunityRecord[]).map(
+    (item) => ({ ...item })
+  );
+  const oppsToUse = cached && cached.length > 0 ? cached : seedOpportunities;
 
   const persistedMap = loadPersistedCrmMap();
   const seedProfile = verifiedSeed.candidate_profile as unknown as CandidateProfile;
   const profile = loadPersistedProfile(seedProfile);
 
-  const merged = cached.map((opp) => {
+  const merged = oppsToUse.map((opp) => {
     const saved = persistedMap[opp.id];
     if (!saved) return opp;
     return {
@@ -224,13 +227,15 @@ export async function getFastCachedState(): Promise<RepositoryState | null> {
     };
   });
 
+  const { deduplicated: deduplicatedCached } = deduplicateOpportunities(merged);
+
   return {
     mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
-    opportunities: merged,
+    opportunities: deduplicatedCached,
     profile,
     nativeSheetId: NATIVE_SHEET_ID,
     uploadedXlsxId: UPLOADED_XLSX_ID,
-    lastSyncedAt: getLatestVerificationTimestamp(merged),
+    lastSyncedAt: getLatestVerificationTimestamp(deduplicatedCached),
     syncTelemetry: loadLatestSyncTelemetry()
   };
 }
@@ -242,6 +247,56 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
   const seedProfile = verifiedSeed.candidate_profile as unknown as CandidateProfile;
   const profile = loadPersistedProfile(seedProfile);
 
+  // 1. Primary: Fetch from Neon PostgreSQL via backend API
+  try {
+    const res = await fetch("/api/opportunities");
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.opportunities) && data.opportunities.length > 0) {
+        const persistedMap = loadPersistedCrmMap();
+        const mergedOpps = (data.opportunities as OpportunityRecord[]).map((opp) => {
+          const saved = persistedMap[opp.id];
+          if (!saved) return opp;
+          return {
+            ...opp,
+            ...saved,
+            workflow: {
+              ...opp.workflow,
+              ...(saved.workflow || {})
+            },
+            activity_history: saved.activity_history || opp.activity_history
+          };
+        });
+
+        const { deduplicated } = deduplicateOpportunities(mergedOpps);
+        void saveCachedOpportunities(deduplicated);
+
+        let telemetry = data.telemetry as SyncTelemetry | null;
+        if (telemetry && !telemetry.nextScheduledSyncUtc) {
+          const nextSync = getNextScheduledSync(new Date(telemetry.startedAt || Date.now()));
+          telemetry = {
+            ...telemetry,
+            nextScheduledSyncIso: nextSync.iso,
+            nextScheduledSyncUtc: nextSync.formattedUtc
+          };
+        }
+
+        return {
+          mode: "NEON_LIVE",
+          opportunities: deduplicated,
+          profile,
+          nativeSheetId: NATIVE_SHEET_ID,
+          uploadedXlsxId: UPLOADED_XLSX_ID,
+          lastSyncedAt: getLatestVerificationTimestamp(deduplicated),
+          syncTelemetry: telemetry || loadLatestSyncTelemetry()
+        };
+      }
+    }
+  } catch (err) {
+    console.warn("Neon API fetch failed or offline, falling back to Supabase/Cache:", err);
+  }
+
+  // 2. Secondary: Fall back to Supabase if configured
   if (isSupabaseConfigured && supabaseClient) {
     try {
       const data = await fetchAllOpportunitiesFromSupabase(supabaseClient);
@@ -287,17 +342,18 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
 
         const persistedMap = loadPersistedCrmMap();
         const mappedOpportunities = mapSupabaseRowsToOpportunities(data, persistedMap);
+        const { deduplicated } = deduplicateOpportunities(mappedOpportunities);
 
         // Cache opportunities persistently for zero-latency retrieval and offline durability
-        void saveCachedOpportunities(mappedOpportunities);
+        void saveCachedOpportunities(deduplicated);
 
         return {
           mode: "SUPABASE_LIVE",
-          opportunities: mappedOpportunities,
+          opportunities: deduplicated,
           profile,
           nativeSheetId: NATIVE_SHEET_ID,
           uploadedXlsxId: UPLOADED_XLSX_ID,
-          lastSyncedAt: getLatestVerificationTimestamp(mappedOpportunities),
+          lastSyncedAt: getLatestVerificationTimestamp(deduplicated),
           syncTelemetry: dbTelemetry || loadLatestSyncTelemetry()
         };
       }
@@ -369,10 +425,52 @@ export async function performOpportunitySync(
   state: RepositoryState;
   telemetry: SyncTelemetry;
 }> {
-  const { records, telemetry } = await executeSyncPipeline(currentRecords, candidateProfile);
+  let telemetry: SyncTelemetry | null = null;
+  let activeRecords = currentRecords;
+  let isNeon = false;
+
+  // 1. Primary: Server-side unified sync endpoint (runs Google ingestion -> Neon PostgreSQL)
+  try {
+    const res = await fetch("/api/sync", { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      telemetry = data as SyncTelemetry;
+
+      // Re-fetch fresh state from Neon
+      const oppsRes = await fetch("/api/opportunities");
+      if (oppsRes.ok) {
+        const oppsData = await oppsRes.json();
+        if (Array.isArray(oppsData.opportunities) && oppsData.opportunities.length > 0) {
+          activeRecords = oppsData.opportunities as OpportunityRecord[];
+          isNeon = true;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Server-side sync endpoint failed, falling back to client pipeline:", err);
+  }
+
+  // 2. Fallback: Edge function or client-side sync pipeline
+  if (!telemetry) {
+    const fallbackResult = await executeSyncPipeline(currentRecords, candidateProfile);
+    activeRecords = fallbackResult.records;
+    telemetry = fallbackResult.telemetry;
+
+    if (isSupabaseConfigured && supabaseClient) {
+      try {
+        const freshRows = await fetchAllOpportunitiesFromSupabase(supabaseClient);
+        if (freshRows.length > 0) {
+          const map = loadPersistedCrmMap();
+          activeRecords = mapSupabaseRowsToOpportunities(freshRows, map);
+        }
+      } catch {
+        // Continue with returned records
+      }
+    }
+  }
 
   const map = loadPersistedCrmMap();
-  for (const r of records) {
+  for (const r of activeRecords) {
     if (r.workflow || r.user_status) {
       map[r.id] = {
         user_status: r.user_status,
@@ -383,24 +481,14 @@ export async function performOpportunitySync(
     }
   }
   savePersistedCrmMap(map);
-
-  let activeRecords = records;
-  if (isSupabaseConfigured && supabaseClient) {
-    try {
-      const freshRows = await fetchAllOpportunitiesFromSupabase(supabaseClient);
-      if (freshRows.length > 0) {
-        activeRecords = mapSupabaseRowsToOpportunities(freshRows, map);
-      }
-    } catch {
-      // Continue with returned records
-    }
-  }
-
-  // Persist to offline cache
   void saveCachedOpportunities(activeRecords);
 
   const state: RepositoryState = {
-    mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
+    mode: isNeon
+      ? "NEON_LIVE"
+      : isSupabaseConfigured && supabaseClient
+        ? "SUPABASE_LIVE"
+        : "SEED_IMPORT_ADAPTER",
     opportunities: activeRecords,
     profile:
       candidateProfile ||
@@ -446,7 +534,18 @@ export async function persistWorkflowMutation(
   };
   savePersistedCrmMap(map);
 
-  // 2. Persist to canonical Supabase database
+  // 2. Persist to Neon PostgreSQL via backend API
+  try {
+    await fetch("/api/workflow", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ opportunityId: updated.id, patch })
+    });
+  } catch (err) {
+    console.warn("Neon workflow persistence error:", err);
+  }
+
+  // 3. Persist to canonical Supabase database for dual-write compatibility
   if (isSupabaseConfigured && supabaseClient) {
     try {
       await supabaseClient.from("workflow_states").upsert(
@@ -464,7 +563,7 @@ export async function persistWorkflowMutation(
         { onConflict: "opportunity_id" }
       );
     } catch {
-      // Local storage copy is preserved
+      // Local storage and Neon copies are preserved
     }
   }
 

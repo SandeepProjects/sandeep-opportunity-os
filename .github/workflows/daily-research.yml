@@ -1,8 +1,8 @@
-name: 6-Hour Opportunity Research Ingestion & Sheets Sync
+name: 5-Hour Opportunity Research Ingestion & Sheets Sync
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 */5 * * *"
   workflow_dispatch:
 
 jobs:

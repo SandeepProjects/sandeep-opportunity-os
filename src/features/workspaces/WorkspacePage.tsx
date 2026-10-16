@@ -1,5 +1,8 @@
 import React, { useMemo, useState } from "react";
 import type { OpportunityRecord, PipelineCategory } from "../../types/opportunity";
+import type { AgentId } from "../../types/agent";
+import { AGENT_REGISTRY } from "../../config/agentRegistry";
+import { resolveOpportunityProvenance } from "../../engine/provenance";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { MetricStrip } from "../../components/ui/Metric";
 import { FilterBar, type SavedViewOption } from "../../components/ui/FilterBar";
@@ -7,7 +10,7 @@ import { DataTable } from "../../components/ui/DataTable";
 import { SectionPanel } from "../../components/ui/SectionPanel";
 
 interface WorkspacePageProps {
-  category: PipelineCategory;
+  category: PipelineCategory | "all";
   title: string;
   subtitle: string;
   opportunities: OpportunityRecord[];
@@ -35,10 +38,11 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
   const [activeView, setActiveView] = useState<string>("all_active");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [agentFilter, setAgentFilter] = useState<AgentId | "ALL">("ALL");
   const [sortBy, setSortBy] = useState<string>("score");
 
   const categoryRecords = useMemo(
-    () => opportunities.filter((o) => o.category === category),
+    () => (category === "all" ? opportunities : opportunities.filter((o) => o.category === category)),
     [opportunities, category]
   );
 
@@ -94,6 +98,10 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
         return (o.workflow?.status || o.user_status) === statusFilter;
       })
       .filter((o) => {
+        if (agentFilter === "ALL") return true;
+        return resolveOpportunityProvenance(o).some((p) => p.agentId === agentFilter);
+      })
+      .filter((o) => {
         if (!searchQuery.trim()) return true;
         const q = searchQuery.toLowerCase();
         return (
@@ -115,7 +123,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
         }
         return a.organization.localeCompare(b.organization);
       });
-  }, [categoryRecords, activeView, statusFilter, searchQuery, sortBy]);
+  }, [categoryRecords, activeView, statusFilter, agentFilter, searchQuery, sortBy]);
 
   const avgScore =
     activeRecords.length > 0
@@ -125,7 +133,9 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
       : 0;
 
   const contextColLabel =
-    category === "freelance_leads"
+    category === "all"
+      ? "Target Details & Value"
+      : category === "freelance_leads"
       ? "Project Band & Deterministic Audit"
       : category === "visa_jobs"
       ? "Work Model & Stack Match"
@@ -136,7 +146,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
   return (
     <>
       <PageHeader
-        eyebrow={`ENTERPRISE WORKSPACE · ${category.toUpperCase()}`}
+        eyebrow={category === "all" ? "ENTERPRISE DIRECTORY · ALL FLEET PIPELINES" : `ENTERPRISE WORKSPACE · ${category.toUpperCase()}`}
         title={title}
         subtitle={subtitle}
       />
@@ -149,6 +159,43 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
           { label: "Excluded by Gates", value: gatedRecords.length, delta: gatedRecords.length > 0 ? "Seniority / Regional gate" : "0 gated in this track", tone: gatedRecords.length > 0 ? "danger" : "default" }
         ]}
       />
+
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "16px", marginBottom: "4px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", marginRight: "4px" }}>
+          Fleet Agent:
+        </span>
+        <button
+          type="button"
+          className={`btn-ghost ${agentFilter === "ALL" ? "active" : ""}`}
+          style={{
+            padding: "3px 8px",
+            fontSize: "11.5px",
+            borderRadius: "4px",
+            backgroundColor: agentFilter === "ALL" ? "var(--bg-elevated)" : "transparent",
+            color: agentFilter === "ALL" ? "var(--accent-primary)" : "var(--text-secondary)"
+          }}
+          onClick={() => setAgentFilter("ALL")}
+        >
+          All Agents (5)
+        </button>
+        {AGENT_REGISTRY.map((ag) => (
+          <button
+            key={ag.id}
+            type="button"
+            className={`btn-ghost ${agentFilter === ag.id ? "active" : ""}`}
+            style={{
+              padding: "3px 8px",
+              fontSize: "11.5px",
+              borderRadius: "4px",
+              backgroundColor: agentFilter === ag.id ? "var(--bg-elevated)" : "transparent",
+              color: agentFilter === ag.id ? ag.themeColor : "var(--text-secondary)"
+            }}
+            onClick={() => setAgentFilter(ag.id)}
+          >
+            {ag.name}
+          </button>
+        ))}
+      </div>
 
       <FilterBar
         views={views}
@@ -164,6 +211,7 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
           setActiveView("all_active");
           setSearchQuery("");
           setStatusFilter("ALL");
+          setAgentFilter("ALL");
           setSortBy("score");
         }}
       />

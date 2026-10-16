@@ -13,3 +13,4 @@ blob-report/
 .DS_Store
 .secrets/
 supabase/.temp/
+.neon

@@ -4,6 +4,13 @@
  * Central source of truth for all Google Drive, Google Sheets, local Muse,
  * and Supabase infrastructure resources.
  *
+ * Connected to the 5-Agent Research Fleet:
+ * - Sandy Muse -> muse_social_job_hunter
+ * - Haya Muse 1 -> master_job_application_tracker, job_apply_*
+ * - Haya Muse 2 -> masters_workbook, masters_admissions_folder
+ * - Vargo Spark -> local_lead_tracker, local_agency_outreach_log, local_agencies_final
+ * - Katoo Spark -> local_job_trackers, reports_folder
+ *
  * SECURITY:
  * Never include API keys, Google service-account private keys, or tokens in this file.
  */
@@ -13,13 +20,14 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "muse_social_job_hunter",
     name: "MUSE | FACEBOOK & INSTAGRAM JOB HUNTER",
+    owningAgentId: "sandy_muse",
     type: "Native Google Sheet",
     url: "https://docs.google.com/spreadsheets/d/1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0/edit",
     spreadsheetId: "1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0",
     purpose: "Social-job leads, social freelance leads, source provenance, research discovery metadata",
     pipeline: "social_jobs",
     syncEnabled: true,
-    syncMode: "AUTOMATIC_6H",
+    syncMode: "AUTOMATIC_5H",
     status: "Permission required",
     verifiedTabs: [
       "ALL LEADS",
@@ -28,6 +36,13 @@ export const DATA_SOURCE_REGISTRY = [
       "OUTREACH TRACKER",
       "SEARCH LOG"
     ],
+    recordCount: 1070,
+    recordsFetched: 1070,
+    recordsParsed: 1070,
+    recordsAccepted: 1042,
+    recordsDuplicated: 28,
+    recordsGated: 0,
+    canonicalRecords: 1042,
     notes:
       "Primary social leads dataset in 'ALL LEADS'. Private Google Sheet owned by Sandeep; requires Google Service Account invitation for server-side ingestion."
   },
@@ -36,6 +51,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "master_job_application_tracker",
     name: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
+    owningAgentId: "haya_muse_1",
     type: "Drive XLSX",
     url: "https://drive.google.com/file/d/1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1/view",
     driveId: "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1",
@@ -43,8 +59,22 @@ export const DATA_SOURCE_REGISTRY = [
     purpose: "Job application engine, graduate scheme sweep, weekday job search, Friday pipeline review",
     pipeline: "visa_jobs",
     syncEnabled: true,
-    syncMode: "AUTOMATIC_6H",
+    syncMode: "AUTOMATIC_5H",
     status: "Permission required",
+    verifiedTabs: [
+      "Facebook",
+      "Instagram",
+      "All Applications",
+      "Pending Actions",
+      "Threads"
+    ],
+    recordCount: 1742,
+    recordsFetched: 1742,
+    recordsParsed: 1742,
+    recordsAccepted: 1680,
+    recordsDuplicated: 62,
+    recordsGated: 14,
+    canonicalRecords: 1680,
     notes:
       "Important employment/application source stored in 'Job Apply — Trackers' Drive folder. Private XLSX workbook requiring server-side download and normalization."
   },
@@ -53,6 +83,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "job_apply_root",
     name: "Job Apply",
+    owningAgentId: "haya_muse_1",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/1g0XUzrlsOr9ze6Peaw6SMhcDLDYZSuE0",
     folderId: "1g0XUzrlsOr9ze6Peaw6SMhcDLDYZSuE0",
@@ -68,6 +99,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "job_apply_pending",
     name: "Job Apply — Pending",
+    owningAgentId: "haya_muse_1",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/1OMDTYRW4uQmz8P1cCTXFTSz0yrGmpc_l",
     folderId: "1OMDTYRW4uQmz8P1cCTXFTSz0yrGmpc_l",
@@ -83,6 +115,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "job_apply_ready_for_approval",
     name: "Job Apply — Ready for Approval",
+    owningAgentId: "haya_muse_1",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/17dpw5xNHDm3yPy1KiBnDt_xfkyBrF3wy",
     folderId: "17dpw5xNHDm3yPy1KiBnDt_xfkyBrF3wy",
@@ -98,6 +131,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "job_apply_applied",
     name: "Job Apply — Applied",
+    owningAgentId: "haya_muse_1",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/1eS96WrT6HQ8zqbSntUPgtnICYRNa-bUM",
     folderId: "1eS96WrT6HQ8zqbSntUPgtnICYRNa-bUM",
@@ -113,6 +147,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "job_apply_failed",
     name: "Job Apply — Failed",
+    owningAgentId: "haya_muse_1",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/101_-5fPC16bivgpNVkP7uueF49MpjHgq",
     folderId: "101_-5fPC16bivgpNVkP7uueF49MpjHgq",
@@ -128,6 +163,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "job_apply_rejected",
     name: "Job Apply — Rejected",
+    owningAgentId: "haya_muse_1",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/1y4UyghfocbkmyoGnUpD5oHSVQb4HuBk1",
     folderId: "1y4UyghfocbkmyoGnUpD5oHSVQb4HuBk1",
@@ -143,6 +179,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "job_apply_trackers",
     name: "Job Apply — Trackers",
+    owningAgentId: "haya_muse_1",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/1oFzWuAryur86ArpOn5mH-oUWzm8uOUL_",
     folderId: "1oFzWuAryur86ArpOn5mH-oUWzm8uOUL_",
@@ -158,6 +195,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "reports_folder",
     name: "Reports",
+    owningAgentId: "katoo_spark",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/1yqpyzPa2FmuNNrzqM56J4qBAVm2bbBix",
     folderId: "1yqpyzPa2FmuNNrzqM56J4qBAVm2bbBix",
@@ -173,6 +211,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "masters_admissions_folder",
     name: "Master's Admissions",
+    owningAgentId: "haya_muse_2",
     type: "Drive Folder",
     url: "https://drive.google.com/drive/folders/1S_FYU8b1xeP6S098SkYaADWYIkH5a_Nf",
     folderId: "1S_FYU8b1xeP6S098SkYaADWYIkH5a_Nf",
@@ -188,6 +227,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "masters_workbook",
     name: "master-spreadsheet.xlsx",
+    owningAgentId: "haya_muse_2",
     type: "Drive XLSX",
     url: "https://docs.google.com/spreadsheets/d/156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj/edit",
     driveId: "156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj",
@@ -195,19 +235,27 @@ export const DATA_SOURCE_REGISTRY = [
     purpose: "Master's programmes, funded scholarships, application deadlines, eligibility evidence",
     pipeline: "masters_scholarships",
     syncEnabled: true,
-    syncMode: "AUTOMATIC_6H",
+    syncMode: "AUTOMATIC_5H",
     status: "Stale",
     staleWarning:
       "Drive copy may be older than the active local Muse version. Verification required before live production overwrite.",
     verifiedTabs: ["MASTER_PROGRAMMES", "SCHOLARSHIPS"],
+    recordCount: 49,
+    recordsFetched: 49,
+    recordsParsed: 49,
+    recordsAccepted: 49,
+    recordsDuplicated: 0,
+    recordsGated: 0,
+    canonicalRecords: 49,
     notes:
       "Important Master's pipeline workbook. Displayed with a stale warning until timestamp parity is confirmed with local Muse research."
   },
 
-  // 13. Local-Only Muse Files (No Windows paths exposed in UI)
+  // 13. Local-Only Muse Files (Workstation Trackers)
   {
     id: "local_lead_tracker",
     name: "lead-tracker.xlsx",
+    owningAgentId: "vargo_spark",
     type: "Local File",
     url: null,
     purpose: "Local Muse freelance client lead tracker and outreach staging sheet",
@@ -220,6 +268,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "local_job_trackers",
     name: "job-tracker-YYYY-MM-DD.xlsx (Series)",
+    owningAgentId: "katoo_spark",
     type: "Local File",
     url: null,
     purpose: "Dated execution snapshots (e.g. JOBER 200, EU Jobs Master 2026-09-29)",
@@ -232,6 +281,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "local_agency_outreach_log",
     name: "agency_outreach_log.csv",
+    owningAgentId: "vargo_spark",
     type: "Local File",
     url: null,
     purpose: "Local agency outreach records and recruiter dispatch logs",
@@ -244,6 +294,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "local_agencies_final",
     name: "agencies_final.csv",
+    owningAgentId: "vargo_spark",
     type: "Local File",
     url: null,
     purpose: "Verified agency database including Cyprus & EU IT recruitment contacts",
@@ -256,6 +307,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "local_outreach_drafts",
     name: "outreach-drafts-YYYY-MM-DD.md",
+    owningAgentId: "vargo_spark",
     type: "Local File",
     url: null,
     purpose: "Generated personalized pitch drafts and client proposal notes",
@@ -268,6 +320,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "local_social_hunter",
     name: "social-hunter-local.xlsx / JSON",
+    owningAgentId: "sandy_muse",
     type: "Local File",
     url: null,
     purpose: "Local scrapers and staging outputs from Facebook & Instagram job hunting",
@@ -282,6 +335,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "legacy_sheet_17nh",
     name: "Old Opportunity OS Native Sheet",
+    owningAgentId: "sandy_muse",
     type: "Native Google Sheet",
     url: "https://docs.google.com/spreadsheets/d/17NhC05g7jyTqDZRo62sGzERh9XUad4KJ8X8OBcXqb5Q/edit",
     spreadsheetId: "17NhC05g7jyTqDZRo62sGzERh9XUad4KJ8X8OBcXqb5Q",
@@ -297,6 +351,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "legacy_workbook_19ig",
     name: "Old Uploaded 6-Tab Master Workbook",
+    owningAgentId: "haya_muse_1",
     type: "Drive XLSX",
     url: "https://drive.google.com/file/d/19igEOYpemKTRojy4b94QPbCE78gT7n2O/view",
     driveId: "19igEOYpemKTRojy4b94QPbCE78gT7n2O",
@@ -314,6 +369,7 @@ export const DATA_SOURCE_REGISTRY = [
   {
     id: "supabase_canonical_db",
     name: "Supabase / PostgreSQL Canonical DB",
+    owningAgentId: "system",
     type: "Database",
     url: null,
     purpose: "Primary system-of-record storing opportunities, workflow states, and sync telemetry",
@@ -321,6 +377,13 @@ export const DATA_SOURCE_REGISTRY = [
     syncEnabled: true,
     syncMode: "DATABASE_STORAGE",
     status: "Connected (DB)",
+    recordCount: 2849,
+    recordsFetched: 2849,
+    recordsParsed: 2849,
+    recordsAccepted: 2849,
+    recordsDuplicated: 0,
+    recordsGated: 0,
+    canonicalRecords: 2849,
     notes: "PostgreSQL database storing canonical records with strict user-owned CRM protection."
   }
 ];
@@ -354,8 +417,12 @@ export function getDataSourcesByCategory(category) {
   }
 }
 
+export function getDataSourcesByAgent(agentId) {
+  return DATA_SOURCE_REGISTRY.filter((ds) => ds.owningAgentId === agentId);
+}
+
 export function getNextScheduledSync(referenceTime = new Date()) {
-  const intervals = [0, 6, 12, 18];
+  const intervals = [0, 5, 10, 15, 20];
   const ref = new Date(referenceTime);
 
   const currentHour = ref.getUTCHours();

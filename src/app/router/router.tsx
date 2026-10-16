@@ -2,20 +2,30 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 
 export type AppRoutePath =
   | "/today"
+  | "/explorer"
+  | "/opportunities"
   | "/freelance"
   | "/jobs"
   | "/masters"
   | "/remote"
+  | "/agents"
+  | "/sources"
+  | "/crm"
   | "/saved"
   | "/operations"
   | "/profile";
 
 export const VALID_ROUTES: AppRoutePath[] = [
   "/today",
+  "/explorer",
+  "/opportunities",
   "/freelance",
   "/jobs",
   "/masters",
   "/remote",
+  "/agents",
+  "/sources",
+  "/crm",
   "/saved",
   "/operations",
   "/profile"
@@ -23,10 +33,12 @@ export const VALID_ROUTES: AppRoutePath[] = [
 
 export function resolveRoutePath(rawPathname: string, rawHash: string): AppRoutePath {
   const hashClean = rawHash.replace(/^#/, "").split("?")[0];
+  if (hashClean === "/saved") return "/saved";
   if (VALID_ROUTES.includes(hashClean as AppRoutePath)) {
     return hashClean as AppRoutePath;
   }
   const pathClean = rawPathname.split("?")[0];
+  if (pathClean === "/saved") return "/saved";
   if (VALID_ROUTES.includes(pathClean as AppRoutePath)) {
     return pathClean as AppRoutePath;
   }

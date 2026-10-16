@@ -251,38 +251,120 @@ export function buildTodayPriorityQueue(records, referenceDate = getLocalIsoDate
     return true;
   });
 
+  const refTime = new Date(`${referenceDate}T00:00:00Z`).getTime();
+
   const scored = active.map((r) => {
     const wf = r.workflow || {};
     const status = wf.status || r.user_status || "New";
     const priority = wf.priority || r.priority || "P1";
     const followUp = wf.follow_up_date !== undefined ? wf.follow_up_date : r.follow_up_date;
     const bucket = classifyFollowUpBucket(followUp, referenceDate);
+    const score = Number(r.score_total || 0);
 
     let urgencyBoost = 0;
-    let actionBadge = "REVIEW NEW MATCH";
+    let actionBadge = "Review Role";
+    let actionReason = `${score} fit · Candidate match`;
 
-    if (bucket === "Overdue" || bucket === "Due today") {
-      urgencyBoost += 18;
-      actionBadge = "FOLLOW UP";
+    // Calculate deadline proximity if deadline exists
+    let daysUntilDeadline = null;
+    if (r.deadline) {
+      const dTime = new Date(`${String(r.deadline).slice(0, 10)}T00:00:00Z`).getTime();
+      if (!Number.isNaN(dTime)) {
+        daysUntilDeadline = Math.round((dTime - refTime) / 86400000);
+      }
+    }
+
+    // Derive action strictly from CRM status, follow-up due date, category and deadline
+    if (status === "Contacted" || status === "Applied" || status === "Interviewing" || status === "Follow-Up") {
+      if (bucket === "Overdue") {
+        urgencyBoost += 22;
+        actionBadge = "Follow Up";
+        const fTime = new Date(`${String(followUp).slice(0, 10)}T00:00:00Z`).getTime();
+        const overdueDays = !Number.isNaN(fTime) ? Math.max(1, Math.round((refTime - fTime) / 86400000)) : 1;
+        actionReason = overdueDays === 1 ? "Follow-up overdue by 1 day" : `Follow-up overdue by ${overdueDays} days`;
+      } else if (bucket === "Due today") {
+        urgencyBoost += 18;
+        actionBadge = "Follow Up";
+        actionReason = "Follow-up scheduled for today";
+      } else if (bucket === "Tomorrow") {
+        urgencyBoost += 10;
+        actionBadge = "Prep Follow-Up";
+        actionReason = "Follow-up due tomorrow";
+      } else {
+        actionBadge = "Track Status";
+        actionReason = `Awaiting response · ${status}`;
+      }
+    } else if (status === "Preparing") {
+      urgencyBoost += 14;
+      actionBadge = "Complete Application";
+      actionReason = daysUntilDeadline !== null && daysUntilDeadline <= 7
+        ? `Deadline in ${daysUntilDeadline}d · Complete submission`
+        : "Application in progress · Pack ready";
+    } else if (daysUntilDeadline !== null && daysUntilDeadline >= 0 && daysUntilDeadline <= 7) {
+      // Approaching deadline takes precedence for new/saved records
+      urgencyBoost += 16;
+      actionBadge = daysUntilDeadline <= 2 ? "Prepare Submission" : "Review Deadline";
+      actionReason = daysUntilDeadline === 0
+        ? "Deadline expires today"
+        : daysUntilDeadline === 1
+        ? "Deadline tomorrow"
+        : `Deadline in ${daysUntilDeadline} days (${r.deadline})`;
     } else if (r.category === "freelance_leads") {
-      actionBadge = status === "Contacted" ? "FOLLOW UP" : "CONTACT LEAD";
-      if (status === "New" || status === "Saved") urgencyBoost += 8;
+      if (status === "Saved") {
+        urgencyBoost += 8;
+        actionBadge = "Contact Lead";
+        actionReason = `${score} fit · Saved prospect ready for pitch`;
+      } else {
+        // New lead
+        if (score >= 88) {
+          urgencyBoost += 10;
+          actionBadge = "Contact Lead";
+          actionReason = `${score} fit · High-value prospect with DOM audit findings`;
+        } else {
+          urgencyBoost += 5;
+          actionBadge = "Review Lead";
+          actionReason = `${score} fit · Uncontacted commercial lead`;
+        }
+      }
     } else if (r.category === "masters_scholarships") {
-      actionBadge = "SCHOLARSHIP DEADLINE";
-      if (r.deadline && String(r.deadline).startsWith("2026-")) urgencyBoost += 10;
-    } else if (r.category === "visa_jobs" || r.category === "remote_jobs") {
-      actionBadge = status === "Applied" ? "FOLLOW UP" : "APPLY";
-      if (status === "Preparing" || status === "Saved") urgencyBoost += 6;
+      if (status === "Saved") {
+        urgencyBoost += 8;
+        actionBadge = "Prepare Submission";
+        actionReason = `${score} fit · Saved scholarship target`;
+      } else {
+        urgencyBoost += 6;
+        actionBadge = "Review Programme";
+        actionReason = r.details?.tuition_and_coverage || `${score} fit · Check UCLan / Erasmus funding`;
+      }
+    } else {
+      // visa_jobs or remote_jobs
+      if (status === "Saved") {
+        urgencyBoost += 8;
+        actionBadge = "Apply";
+        actionReason = `${score} fit · Saved role ready for CV submission`;
+      } else {
+        // New job
+        if (score >= 85) {
+          urgencyBoost += 9;
+          actionBadge = "Review Role";
+          actionReason = `${score} fit · High alignment target`;
+        } else {
+          urgencyBoost += 4;
+          actionBadge = "Check Eligibility";
+          actionReason = `${score} fit · Early-career matching role`;
+        }
+      }
     }
 
     if (priority === "High" || priority === "P0") urgencyBoost += 7;
     if (wf.favorite || r.favorite) urgencyBoost += 4;
 
-    const queuePriorityScore = Number(r.score_total || 0) + urgencyBoost;
+    const queuePriorityScore = score + urgencyBoost;
 
     return {
       ...r,
       action_badge: actionBadge,
+      action_reason: actionReason,
       follow_up_bucket: bucket,
       queue_priority_score: queuePriorityScore
     };

@@ -2,13 +2,16 @@ import React from "react";
 import {
   Activity,
   Bookmark,
+  Bot,
   BriefcaseBusiness,
   Check,
   CircleX,
   Clock3,
+  Database,
   ExternalLink,
   Globe2,
   GraduationCap,
+  Layers,
   LayoutDashboard,
   Menu,
   Monitor,
@@ -16,6 +19,7 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Star,
   Sun,
   TriangleAlert,
@@ -26,10 +30,14 @@ import {
 
 export type IconName =
   | "today"
+  | "opportunities"
   | "freelance"
   | "jobs"
   | "masters"
   | "remote"
+  | "agents"
+  | "sources"
+  | "crm"
   | "saved"
   | "operations"
   | "profile"
@@ -45,7 +53,8 @@ export type IconName =
   | "filter"
   | "close"
   | "menu"
-  | "star";
+  | "star"
+  | "sparkles";
 
 interface IconProps {
   name: IconName;
@@ -55,10 +64,14 @@ interface IconProps {
 
 const ICONS: Record<IconName, LucideIcon> = {
   today: LayoutDashboard,
+  opportunities: Layers,
   freelance: Globe2,
   jobs: BriefcaseBusiness,
   masters: GraduationCap,
   remote: Monitor,
+  agents: Bot,
+  sources: Database,
+  crm: Bookmark,
   saved: Bookmark,
   operations: Activity,
   profile: UserRound,
@@ -74,7 +87,8 @@ const ICONS: Record<IconName, LucideIcon> = {
   filter: SlidersHorizontal,
   close: X,
   menu: Menu,
-  star: Star
+  star: Star,
+  sparkles: Sparkles
 };
 
 export const Icon: React.FC<IconProps> = ({ name, size = 15, className = "" }) => {

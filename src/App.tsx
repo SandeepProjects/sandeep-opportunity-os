@@ -14,16 +14,66 @@ import { LoadingSkeleton } from "./components/ui/LoadingSkeleton";
 import { TodayPage } from "./features/today/TodayPage";
 import { WorkspacePage } from "./features/workspaces/WorkspacePage";
 import { SavedFollowUpsPage } from "./features/crm/SavedFollowUpsPage";
+import { AiAgentsPage } from "./features/agents/AiAgentsPage";
+import { DataSourcesPage } from "./features/sources/DataSourcesPage";
 import { OperationsPage } from "./features/operations/OperationsPage";
 import { ProfilePage } from "./features/profile/ProfilePage";
+import { AuthProvider, AuthGuard, useAuth } from "./features/auth/AuthGuard";
+import { ExplorerWorkspace } from "./features/explorer/ExplorerWorkspace";
+import {
+  type ExplorerSelection,
+  type ExplorerAgent,
+  type WorkspaceConfig,
+  type FolderConfig,
+  type SheetConfig,
+  type ExplorerAgentId
+} from "./features/explorer/explorerData";
 import type { CandidateProfile, OpportunityRecord, WorkflowState } from "./types/opportunity";
 
 const MainContent: React.FC = () => {
-  const { currentPath, navigate } = useAppRouter();
+  const { currentPath, searchParams, navigate } = useAppRouter();
+  const { logout } = useAuth();
   const [repoState, setRepoState] = useState<RepositoryState | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityRecord | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  // Initialize Explorer selection from search params or defaults
+  const [selection, setSelection] = useState<ExplorerSelection>(() => {
+    const sp = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : searchParams;
+    const agent = (sp.get("agent") as ExplorerAgentId) || "bago_muse";
+    const ws = sp.get("ws") || "ws_bagomuse";
+    const hasFolder = sp.has("folder");
+    const hasSheet = sp.has("sheet");
+    const folder = hasFolder ? sp.get("folder") || undefined : "f_social_hunter";
+    const sheet = hasSheet ? sp.get("sheet") || undefined : (hasFolder ? undefined : "muse_social_job_hunter");
+    const tab = sp.get("tab") || (sheet ? "ALL LEADS" : undefined);
+    return {
+      agentId: agent,
+      workspaceId: ws,
+      folderId: folder,
+      sheetId: sheet,
+      tabId: tab
+    };
+  });
+
+  useEffect(() => {
+    if (currentPath === "/explorer") {
+      const agent = searchParams.get("agent") as ExplorerAgentId | null;
+      const ws = searchParams.get("ws");
+      const hasFolder = searchParams.has("folder");
+      const hasSheet = searchParams.has("sheet");
+      const hasTab = searchParams.has("tab");
+
+      setSelection((prev) => ({
+        agentId: agent || prev.agentId,
+        workspaceId: ws || prev.workspaceId,
+        folderId: hasFolder ? searchParams.get("folder") || undefined : prev.folderId,
+        sheetId: hasSheet ? searchParams.get("sheet") || undefined : (hasFolder ? undefined : prev.sheetId),
+        tabId: hasTab ? searchParams.get("tab") || undefined : (hasSheet ? undefined : prev.tabId)
+      }));
+    }
+  }, [currentPath, searchParams]);
 
   useEffect(() => {
     let active = true;
@@ -35,7 +85,7 @@ const MainContent: React.FC = () => {
       }
     });
 
-    // 2. Fetch fresh live state from Supabase / server
+    // 2. Fetch fresh live state from Neon / Supabase / server
     void fetchOpportunityState().then((state) => {
       if (active) {
         setRepoState(state);
@@ -95,6 +145,139 @@ const MainContent: React.FC = () => {
     setRepoState((prev) => (prev ? { ...prev, profile: persisted } : prev));
   }, []);
 
+  // Selection handlers for Drive Explorer and Workspace Agents
+  const handleSelectAgent = useCallback(
+    (agent: ExplorerAgent) => {
+      let wsId = agent.defaultWorkspaceId;
+      let fId: string | undefined = undefined;
+      let sId: string | undefined = undefined;
+      let tId: string | undefined = undefined;
+
+      if (agent.id === "bago_muse") {
+        wsId = "ws_bagomuse";
+        fId = "f_social_hunter";
+        sId = "muse_social_job_hunter";
+        tId = "ALL LEADS";
+      } else if (agent.id === "kattu_ai") {
+        wsId = "ws_kattu";
+        fId = "f_emea_remote";
+        sId = "sheet_remote_devs";
+        tId = "ACTIVE REMOTE";
+      } else if (agent.id === "haya_satnam") {
+        wsId = "ws_musesatnam";
+        fId = "f_cyprus_visa";
+        sId = "master_job_application_tracker";
+        tId = "All Applications";
+      } else if (agent.id === "haya_arsh") {
+        wsId = "ws_haya_arsh";
+        fId = "f_masters_programmes_scholarships";
+        sId = "masters_workbook";
+        tId = "MASTER_PROGRAMMES";
+      }
+
+      const next: ExplorerSelection = {
+        agentId: agent.id,
+        workspaceId: wsId,
+        folderId: fId,
+        sheetId: sId,
+        tabId: tId
+      };
+      setSelection(next);
+      navigate("/explorer", {
+        agent: agent.id,
+        ws: wsId,
+        ...(fId ? { folder: fId } : {}),
+        ...(sId ? { sheet: sId } : {}),
+        ...(tId ? { tab: tId } : {})
+      });
+    },
+    [navigate]
+  );
+
+  const handleSelectWorkspace = useCallback(
+    (ws: WorkspaceConfig) => {
+      const next: ExplorerSelection = {
+        workspaceId: ws.id,
+        agentId: ws.ownerAgentId,
+        folderId: undefined,
+        sheetId: undefined,
+        tabId: undefined
+      };
+      setSelection(next);
+      navigate("/explorer", {
+        ws: ws.id,
+        ...(ws.ownerAgentId ? { agent: ws.ownerAgentId } : {})
+      });
+    },
+    [navigate]
+  );
+
+  const handleSelectFolder = useCallback(
+    (folder: FolderConfig, ws: WorkspaceConfig) => {
+      const next: ExplorerSelection = {
+        workspaceId: ws.id,
+        agentId: ws.ownerAgentId,
+        folderId: folder.id,
+        sheetId: undefined,
+        tabId: undefined
+      };
+      setSelection(next);
+      navigate("/explorer", {
+        ws: ws.id,
+        folder: folder.id,
+        ...(ws.ownerAgentId ? { agent: ws.ownerAgentId } : {})
+      });
+    },
+    [navigate]
+  );
+
+  const handleSelectSheet = useCallback(
+    (sheet: SheetConfig, folder?: FolderConfig, ws?: WorkspaceConfig) => {
+      const wsId = ws?.id || selection.workspaceId;
+      const fId = folder?.id || selection.folderId;
+      const tId = sheet.tabs[0]?.id;
+
+      const next: ExplorerSelection = {
+        workspaceId: wsId,
+        folderId: fId,
+        sheetId: sheet.id,
+        tabId: tId,
+        agentId: ws?.ownerAgentId || selection.agentId
+      };
+      setSelection(next);
+      navigate("/explorer", {
+        ws: wsId,
+        ...(fId ? { folder: fId } : {}),
+        sheet: sheet.id,
+        ...(tId ? { tab: tId } : {})
+      });
+    },
+    [navigate, selection]
+  );
+
+  const handleSelectTab = useCallback(
+    (tabId: string, sheet: SheetConfig, folder?: FolderConfig, ws?: WorkspaceConfig) => {
+      const wsId = ws?.id || selection.workspaceId;
+      const fId = folder?.id || selection.folderId;
+
+      const next: ExplorerSelection = {
+        workspaceId: wsId,
+        folderId: fId,
+        sheetId: sheet.id,
+        tabId: tabId,
+        agentId: ws?.ownerAgentId || selection.agentId
+      };
+      setSelection(next);
+      navigate("/explorer", {
+        ws: wsId,
+        ...(fId ? { folder: fId } : {}),
+        sheet: sheet.id,
+        tab: tabId
+      });
+    },
+    [navigate, selection]
+  );
+
   if (!repoState) {
     return <LoadingSkeleton />;
   }
@@ -113,7 +296,39 @@ const MainContent: React.FC = () => {
       isSyncing={isSyncing}
       theme={theme}
       onToggleTheme={toggleTheme}
+      onLogout={logout}
+      selection={selection}
+      onSelectAgent={handleSelectAgent}
+      onSelectWorkspace={handleSelectWorkspace}
+      onSelectFolder={handleSelectFolder}
+      onSelectSheet={handleSelectSheet}
+      onSelectTab={handleSelectTab}
     >
+      {/* 1. Drive Explorer Workspace View */}
+      {currentPath === "/explorer" && (
+        <ExplorerWorkspace
+          opportunities={opportunities}
+          selectedOpportunityId={selectedOpportunity?.id}
+          onSelectOpportunity={setSelectedOpportunity}
+          lastSyncedAt={lastSyncedAt}
+          selection={selection}
+          onUpdateSelection={(patch) => {
+            setSelection((prev) => {
+              const next = { ...prev, ...patch };
+              navigate("/explorer", {
+                ...(next.agentId ? { agent: next.agentId } : {}),
+                ...(next.workspaceId ? { ws: next.workspaceId } : {}),
+                ...(next.folderId ? { folder: next.folderId } : {}),
+                ...(next.sheetId ? { sheet: next.sheetId } : {}),
+                ...(next.tabId ? { tab: next.tabId } : {})
+              });
+              return next;
+            });
+          }}
+        />
+      )}
+
+      {/* 2. Today Command Center */}
       {currentPath === "/today" && (
         <TodayPage
           opportunities={opportunities}
@@ -124,10 +339,45 @@ const MainContent: React.FC = () => {
           isSyncing={isSyncing}
         />
       )}
+
+      {/* 3. All Opportunities Directory */}
+      {currentPath === "/opportunities" && (
+        <WorkspacePage
+          category="all"
+          title="All Opportunities Directory"
+          subtitle="Unified multi-agent database spanning freelance leads, engineering jobs, remote opportunities, and scholarships."
+          opportunities={opportunities}
+          selectedId={selectedOpportunity?.id}
+          onSelectOpportunity={setSelectedOpportunity}
+        />
+      )}
+
+      {/* 4. AI Agent Fleet */}
+      {currentPath === "/agents" && (
+        <AiAgentsPage
+          opportunities={opportunities}
+          onSelectOpportunity={setSelectedOpportunity}
+          onNavigate={navigate}
+          onSyncNow={handleTriggerSync}
+          isSyncing={isSyncing}
+        />
+      )}
+
+      {/* 5. Data Sources Hub */}
+      {currentPath === "/sources" && (
+        <DataSourcesPage
+          onSyncNow={handleTriggerSync}
+          isSyncing={isSyncing}
+          lastSyncedAt={lastSyncedAt}
+          recordCount={opportunities.length}
+        />
+      )}
+
+      {/* 6. Pipelines */}
       {currentPath === "/freelance" && (
         <WorkspacePage
           category="freelance_leads"
-          title="Freelance Website & Web-App Client Leads"
+          title="Freelance Client Leads"
           subtitle="High-conversion Cyprus & UK SME targets with deterministic DOM findings and commercial outreach hooks."
           opportunities={opportunities}
           selectedId={selectedOpportunity?.id}
@@ -137,7 +387,7 @@ const MainContent: React.FC = () => {
       {currentPath === "/jobs" && (
         <WorkspacePage
           category="visa_jobs"
-          title="Cyprus On-Site & EU Visa-Sponsoring Engineering Jobs"
+          title="Visa & Cyprus Jobs"
           subtitle="Junior / Graduate & Early-Career (0–2 yr) frontend and full-stack roles with Seniority Gate enforcement."
           opportunities={opportunities}
           selectedId={selectedOpportunity?.id}
@@ -147,7 +397,7 @@ const MainContent: React.FC = () => {
       {currentPath === "/masters" && (
         <WorkspacePage
           category="masters_scholarships"
-          title="Master's Degrees & Funded Scholarships (2026/2027)"
+          title="Master's & Scholarships"
           subtitle="UCLan Cyprus 40% Alumni Scholarship, Erasmus Mundus Joint Masters & EU MSc programmes."
           opportunities={opportunities}
           selectedId={selectedOpportunity?.id}
@@ -157,19 +407,23 @@ const MainContent: React.FC = () => {
       {currentPath === "/remote" && (
         <WorkspacePage
           category="remote_jobs"
-          title="Remote Engineering Jobs & Paid Internships (Cyprus / EMEA)"
+          title="Remote & Internships"
           subtitle="Cyprus-compatible remote roles with Regional Restriction Gate excluding US-only & Africa-only listings."
           opportunities={opportunities}
           selectedId={selectedOpportunity?.id}
           onSelectOpportunity={setSelectedOpportunity}
         />
       )}
-      {currentPath === "/saved" && (
+
+      {/* 7. CRM Follow-ups */}
+      {(currentPath === "/crm" || currentPath === "/saved") && (
         <SavedFollowUpsPage
           opportunities={opportunities}
           onSelectOpportunity={setSelectedOpportunity}
         />
       )}
+
+      {/* 8. Operations & Health */}
       {currentPath === "/operations" && (
         <OperationsPage
           mode={mode}
@@ -183,10 +437,13 @@ const MainContent: React.FC = () => {
           telemetry={repoState.syncTelemetry}
         />
       )}
+
+      {/* 9. Candidate Profile */}
       {currentPath === "/profile" && (
         <ProfilePage profile={profile} onUpdateProfile={handleUpdateProfile} />
       )}
 
+      {/* Detail Drawer for Inspecting and Mutating Sandeep's 7 CRM Fields */}
       <OpportunityDrawer
         opportunity={selectedOpportunity}
         onClose={() => setSelectedOpportunity(null)}
@@ -197,9 +454,13 @@ const MainContent: React.FC = () => {
 };
 
 export const App: React.FC = () => (
-  <AppRouterProvider>
-    <MainContent />
-  </AppRouterProvider>
+  <AuthProvider>
+    <AuthGuard>
+      <AppRouterProvider>
+        <MainContent />
+      </AppRouterProvider>
+    </AuthGuard>
+  </AuthProvider>
 );
 
 export default App;

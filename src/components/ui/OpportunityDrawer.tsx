@@ -10,6 +10,9 @@ import { Score } from "./Score";
 import { StatusBadge } from "./StatusBadge";
 import { EligibilityBadge } from "./EligibilityBadge";
 import { PriorityBadge } from "./PriorityBadge";
+import { resolveOpportunityProvenance } from "../../engine/provenance";
+import { getAgentById } from "../../config/agentRegistry";
+import { formatCategoryName } from "../../lib/formatters";
 
 interface OpportunityDrawerProps {
   opportunity: OpportunityRecord | null;
@@ -121,6 +124,7 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
     new Set([opportunity.source_url, ...(opportunity.provenance_urls || [])].filter(Boolean))
   );
   const scoreComponents = normalizeScoreComponents(opportunity);
+  const agentProvenances = resolveOpportunityProvenance(opportunity);
 
   return (
     <div
@@ -135,6 +139,9 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <span className="os-badge neutral mono">{opportunity.id}</span>
+              <span className="os-badge neutral" style={{ fontSize: "11px" }}>
+                {formatCategoryName(opportunity.category)}
+              </span>
               <EligibilityBadge opportunity={opportunity} />
               <PriorityBadge priority={wf.priority} />
               <StatusBadge status={wf.status} />
@@ -485,13 +492,69 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
             </div>
           </section>
 
-          {/* 7. Source Provenance & Research Metadata */}
+          {/* 7. AI Agent Fleet Provenance & Source Audit */}
           <section className="os-drawer-section">
             <h3 className="os-drawer-section-title">
-              <span>7. Source Provenance & Research Metadata</span>
+              <span>7. AI Agent Fleet Provenance & Sources</span>
               <span className="mono">Verified: {opportunity.last_verified_at}</span>
             </h3>
-            <ul style={{ margin: "0 0 10px", paddingLeft: "18px", fontSize: "12.5px" }}>
+
+            {/* Multi-Agent Provenance Cards */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
+              {agentProvenances.map((prov, i) => {
+                const ag = getAgentById(prov.agentId);
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      backgroundColor: "var(--bg-elevated)",
+                      border: "1px solid var(--border-subtle)",
+                      borderLeft: `3px solid ${ag?.themeColor || "var(--accent-primary)"}`
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span className="mono" style={{ fontWeight: 600, color: ag?.themeColor || "var(--accent-primary)", fontSize: "12px" }}>
+                          {prov.agentName}
+                        </span>
+                        {ag?.codename && (
+                          <span className="os-badge neutral mono" style={{ fontSize: "10px" }}>
+                            {ag.codename}
+                          </span>
+                        )}
+                      </div>
+                      <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        {prov.firstSeenAt}
+                      </span>
+                    </div>
+
+                    <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: "4px" }}>
+                      Source: <strong>{prov.sourceName}</strong> {prov.sourceTab ? `· Tab: ${prov.sourceTab}` : ""} {prov.sourceRowRef ? `(${prov.sourceRowRef})` : ""}
+                    </div>
+
+                    {prov.sourceUrl && (
+                      <div style={{ marginTop: "4px" }}>
+                        <a
+                          href={prov.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: "11.5px", wordBreak: "break-all" }}
+                        >
+                          {prov.sourceUrl} ↗
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "var(--text-muted)", margin: "10px 0 6px" }}>
+              Direct Source Links
+            </h4>
+            <ul style={{ margin: "0 0 10px", paddingLeft: "18px", fontSize: "12px" }}>
               {provenanceUrls.map((u, i) => (
                 <li key={i}>
                   <a href={u} target="_blank" rel="noopener noreferrer">
@@ -500,8 +563,9 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
                 </li>
               ))}
             </ul>
+
             <h4 style={{ fontSize: "11px", textTransform: "uppercase", color: "var(--text-muted)", margin: "10px 0 6px" }}>
-              Activity & Audit Trail
+              Activity History & Audit Trail
             </h4>
             <ul style={{ margin: 0, paddingLeft: "18px", fontSize: "12px", color: "var(--text-secondary)" }}>
               {(opportunity.activity_history || []).map((ev, idx) => (

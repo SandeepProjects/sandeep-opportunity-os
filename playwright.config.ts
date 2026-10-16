@@ -3,12 +3,13 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.playwright.spec.ts",
-  fullyParallel: true,
+  fullyParallel: false,
   retries: 1,
   webServer: {
-    command: "npm run preview -- --host 127.0.0.1",
+    command: "npm run preview -- --host 127.0.0.1 --port 4173",
     url: "http://127.0.0.1:4173",
-    reuseExistingServer: true
+    reuseExistingServer: true,
+    timeout: 60000
   },
   use: {
     baseURL: "http://127.0.0.1:4173",
