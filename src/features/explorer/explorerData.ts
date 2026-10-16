@@ -109,21 +109,21 @@ export const WORKSPACE_AGENTS: ExplorerAgent[] = [
   {
     id: "haya_arsh",
     name: "Haya Arsh",
-    codename: "HAYA-ARSH-ACADEMIC",
-    role: "Academic & Funded Scholarship Intelligence Scout",
+    codename: "HAYA-ARSH",
+    role: "Workspace not configured yet",
     initials: "HA",
     themeColor: "#8b5cf6", // Violet / Purple
-    status: "online",
+    status: "idle",
     defaultWorkspaceId: "ws_haya_arsh",
-    description: "Tracks Master's degree programmes, Erasmus Mundus consortia, and 40% UCLan Cyprus Alumni funded scholarships for 2026/2027 admissions."
+    description: "Workspace not configured yet"
   }
 ];
 
 export const WORKSPACE_TREE: WorkspaceConfig[] = [
-  // 1. BAGOMUSE - SANDY MUSE
+  // 1. Bago Muse Workspace
   {
     id: "ws_bagomuse",
-    name: "BAGOMUSE - SANDY MUSE",
+    name: "Bago Muse",
     ownerAgentId: "bago_muse",
     description: "Primary social job hunting and client research workspace with multi-channel outreach sheets.",
     sheets: [],
@@ -151,18 +151,33 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
             ]
           },
           {
-            id: "sheet_grad_schemes",
-            name: "Graduate Schemes - Master Tracker",
-            driveId: "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1",
-            sourceId: "master_job_application_tracker",
-            fileType: "xlsx",
+            id: "graduate_schemes_tracker",
+            name: "GRADUATE SCHEMES - MASTER TRACKER",
+            sourceId: "graduate_schemes_tracker",
+            fileType: "google_sheet",
             category: "visa_jobs",
-            description: "Graduate schemes, UK/EU technology tracks, and enterprise engineering applications.",
+            description: "Dedicated graduate scheme research and discovery source for UK/EU graduate technology programmes and visa sponsorship.",
             tabs: [
               { id: "ALL SCHEMES", label: "ALL SCHEMES" },
               { id: "PORTALS", label: "PORTALS" },
               { id: "DEADLINES", label: "DEADLINES", filterFn: (opp) => Boolean(opp.deadline) },
               { id: "ARCHIVED", label: "ARCHIVED", filterFn: (opp) => opp.is_active === false }
+            ]
+          },
+          {
+            id: "master_job_application_tracker",
+            name: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
+            driveId: "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1",
+            sourceId: "master_job_application_tracker",
+            fileType: "xlsx",
+            category: "visa_jobs",
+            description: "Historical application and submission pipeline across multi-platform candidate stages.",
+            tabs: [
+              { id: "All Applications", label: "ALL APPLICATIONS" },
+              { id: "Facebook", label: "FACEBOOK" },
+              { id: "Instagram", label: "INSTAGRAM" },
+              { id: "Pending Actions", label: "PENDING ACTIONS" },
+              { id: "Threads", label: "THREADS" }
             ]
           }
         ]
@@ -223,6 +238,21 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
         description: "Academic documentation and funding opportunity trackers.",
         sheets: [
           {
+            id: "masters_workbook",
+            name: "master-spreadsheet.xlsx",
+            driveId: "156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj",
+            spreadsheetId: "156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj",
+            sourceId: "masters_workbook",
+            fileType: "xlsx",
+            category: "masters_scholarships",
+            description: "Master's programmes and funded scholarships workbook across EU and UCLan Cyprus.",
+            externalUrl: "https://docs.google.com/spreadsheets/d/156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj/edit",
+            tabs: [
+              { id: "MASTER_PROGRAMMES", label: "MASTER_PROGRAMMES" },
+              { id: "SCHOLARSHIPS", label: "SCHOLARSHIPS" }
+            ]
+          },
+          {
             id: "sheet_masters_help_overview",
             name: "Programmes Overview",
             fileType: "google_sheet",
@@ -279,67 +309,132 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
     id: "ws_musesatnam",
     name: "MUSESATNAM",
     ownerAgentId: "haya_satnam",
-    description: "Haya Satnam's dedicated enterprise job application workspace and country-based trackers.",
+    description: "Haya Satnam's dedicated enterprise job application workspace and country-based trackers (Root: Muse_Satnam - 1sLbCzLwWZzRcihxM5LlyrZokxtmw_Dj-).",
     sheets: [],
     folders: [
       {
-        id: "f_cyprus_visa",
-        name: "Cyprus Visa & On-Site Engineering",
-        description: "Nicosia and Limassol based engineering roles with relocation and visa readiness.",
+        id: "f_global_jobs",
+        name: "Global Jobs & Freelance",
+        description: "International job markets: Canada, South America, MENA, Japan, India, South Korea.",
         sheets: [
           {
-            id: "master_job_application_tracker",
-            name: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
-            driveId: "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1",
+            id: "satnam_global_jobs",
+            name: "Global Jobs & Freelance Multi-Continent Tracker",
+            sourceId: "satnam_global_jobs",
+            fileType: "xlsx",
+            category: "visa_jobs",
+            description: "Direct application and visa engineering positions across 6 continental markets.",
+            tabs: [
+              { id: "All Roles", label: "ALL ROLES" },
+              { id: "Canada", label: "CANADA" },
+              { id: "South America", label: "SOUTH AMERICA" },
+              { id: "MENA", label: "MENA REGION" },
+              { id: "Japan", label: "JAPAN" },
+              { id: "India", label: "INDIA" },
+              { id: "South Korea", label: "SOUTH KOREA" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "f_global_pipeline",
+        name: "Global Application Pipeline",
+        description: "Consolidated application pipeline across corporate ATS and direct email submissions.",
+        sheets: [
+          {
+            id: "satnam_global_pipeline",
+            name: "Active Application Pipeline",
+            sourceId: "satnam_global_pipeline",
+            fileType: "xlsx",
+            category: "visa_jobs",
+            description: "Active application stages, submission timestamps, and interview milestones.",
+            tabs: [
+              { id: "Active Pipeline", label: "ACTIVE PIPELINE" },
+              { id: "Submitted", label: "SUBMITTED" },
+              { id: "Follow-ups", label: "FOLLOW-UPS" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "f_portal_directory",
+        name: "Global Portal Directory",
+        description: "Curated registry of 250+ enterprise candidate career portals and regional ATS engines.",
+        sheets: [
+          {
+            id: "satnam_portal_directory",
+            name: "Corporate ATS & Portals Registry",
+            sourceId: "satnam_portal_directory",
+            fileType: "google_sheet",
+            category: "visa_jobs",
+            description: "Indexed company career portals across tech hubs.",
+            tabs: [
+              { id: "PORTALS", label: "ALL PORTALS" },
+              { id: "DIRECT ATS", label: "DIRECT ATS" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "f_hpv_prospecting",
+        name: "HPV Client Prospecting",
+        description: "High-probability commercial freelance client leads in UK, US, and MENA regions.",
+        sheets: [
+          {
+            id: "satnam_hpv_prospecting",
+            name: "High-Probability Client Targets",
+            sourceId: "satnam_hpv_prospecting",
+            fileType: "xlsx",
+            category: "freelance_leads",
+            description: "Commercial client prospecting and business consulting leads.",
+            tabs: [
+              { id: "PROSPECTS", label: "PROSPECTS" },
+              { id: "PITCHES", label: "PITCHES SENT" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "f_businesslending",
+        name: "BusinessLending.uk",
+        description: "Financial services and fintech marketing engagement sheet for BusinessLending.uk.",
+        sheets: [
+          {
+            id: "satnam_businesslending_social",
+            name: "BusinessLending.uk Social Media Log",
+            sourceId: "satnam_businesslending_social",
+            fileType: "xlsx",
+            category: "freelance_leads",
+            description: "Commercial lending engagement and outreach log.",
+            tabs: [
+              { id: "CAMPAIGNS", label: "CAMPAIGNS" },
+              { id: "ENGAGEMENT", label: "ENGAGEMENT" }
+            ]
+          }
+        ]
+      },
+      {
+        id: "f_satnam_docs",
+        name: "Documentation & System Registry",
+        description: "Operational procedures, prompt matrices, and execution logs for Muse_Satnam.",
+        sheets: []
+      },
+      {
+        id: "f_legacy_inherited",
+        name: "Legacy Inherited Records",
+        description: "1,605 historical records preserved from legacy Haya Muse 1 & 2 crawler migrations.",
+        sheets: [
+          {
+            id: "sheet_legacy_inherited_satnam",
+            name: "Haya Muse 1 & 2 Historical Archive",
             sourceId: "master_job_application_tracker",
             fileType: "xlsx",
             category: "visa_jobs",
-            description: "Canonical OpenXML application engine tracking Cyprus on-site and EU visa roles.",
-            externalUrl: "https://drive.google.com/file/d/1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1/view",
+            description: "Historical visa and employment listings migrated from legacy Haya Muse crawlers.",
             tabs: [
-              { id: "All Applications", label: "All Applications" },
-              { id: "Facebook", label: "Facebook" },
-              { id: "Instagram", label: "Instagram" },
-              { id: "Pending Actions", label: "Pending Actions", filterFn: (opp) => ["New", "Preparing"].includes(opp.workflow?.status || opp.user_status) },
-              { id: "Threads", label: "Threads" }
-            ]
-          }
-        ]
-      },
-      {
-        id: "f_uk_eu_strategic",
-        name: "UK & EU Strategic Applications",
-        description: "Graduate programs and structured technology trainee schemes.",
-        sheets: [
-          {
-            id: "sheet_satnam_grad_schemes",
-            name: "Graduate Schemes Tracker",
-            fileType: "xlsx",
-            category: "visa_jobs",
-            description: "Tier-2 / skilled worker visa sponsoring technology graduate programmes.",
-            tabs: [
-              { id: "ACTIVE SCHEMES", label: "ACTIVE SCHEMES" },
-              { id: "DEADLINES", label: "DEADLINES", filterFn: (opp) => Boolean(opp.deadline) },
-              { id: "PORTALS", label: "PORTALS" }
-            ]
-          }
-        ]
-      },
-      {
-        id: "f_country_direct",
-        name: "Country Direct Applications",
-        description: "Direct company portal submissions by country.",
-        sheets: [
-          {
-            id: "sheet_country_direct_tracker",
-            name: "Country Trackers",
-            fileType: "xlsx",
-            category: "visa_jobs",
-            description: "Targeted applications across Cyprus, Germany, and the Netherlands.",
-            tabs: [
-              { id: "CYPRUS DIRECT", label: "CYPRUS DIRECT" },
-              { id: "GERMANY DIRECT", label: "GERMANY DIRECT" },
-              { id: "NETHERLANDS DIRECT", label: "NETHERLANDS DIRECT" }
+              { id: "ALL HISTORICAL", label: "ALL HISTORICAL" },
+              { id: "HAYA MUSE 1", label: "HAYA MUSE 1", filterFn: (opp) => opp.discovered_by_agent === "haya_muse_1" || Boolean(opp.agent_provenance?.some((p) => p.agentId === "haya_muse_1")) },
+              { id: "HAYA MUSE 2", label: "HAYA MUSE 2", filterFn: (opp) => opp.discovered_by_agent === "haya_muse_2" || Boolean(opp.agent_provenance?.some((p) => p.agentId === "haya_muse_2")) }
             ]
           }
         ]
@@ -352,44 +447,100 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
     id: "ws_kattu",
     name: "Projects KattuAI",
     ownerAgentId: "kattu_ai",
-    description: "Kattu AI's distributed workspace focusing on European remote roles and regional tech hubs.",
+    description: "Kattu AI's distributed workspace focusing on European remote roles and regional tech research fleets (Argon 4 + Spark).",
     sheets: [],
     folders: [
       {
-        id: "f_emea_remote",
-        name: "EMEA Remote Engineering",
-        description: "Full-time remote engineering positions compatible with Cyprus timezone (UTC+2).",
+        id: "f_regional_fleet",
+        name: "Regional Research Fleet (Argon 4 + Spark)",
+        description: "Dynamic dated regional research sheets with multi-tab dated discovery.",
         sheets: [
           {
-            id: "sheet_remote_devs",
-            name: "Remote Developers & Interns",
+            id: "kattu_india_regional",
+            name: "Projects KattuAI — India Regional Job Research",
+            spreadsheetId: "15hOKXuvZDIrytvqRLQNvLQx4w7wTdFS-DSnvT1XIkOw",
+            sourceId: "kattu_india_regional",
             fileType: "google_sheet",
             category: "remote_jobs",
-            description: "Distributed software development roles verified for Mediterranean/European contractors.",
+            description: "Dynamic dated remote and technology research for India engineering market.",
+            externalUrl: "https://docs.google.com/spreadsheets/d/15hOKXuvZDIrytvqRLQNvLQx4w7wTdFS-DSnvT1XIkOw/edit",
             tabs: [
-              { id: "ACTIVE REMOTE", label: "ACTIVE REMOTE" },
-              { id: "CONTRACT", label: "CONTRACT / FREELANCE" },
-              { id: "FULL-TIME", label: "FULL-TIME REMOTE" },
-              { id: "INTERNS", label: "PAID INTERNSHIPS" }
+              { id: "ALL ROLES", label: "ALL ROLES" },
+              { id: "20Oct", label: "20Oct" },
+              { id: "21Oct", label: "21Oct" },
+              { id: "22Oct", label: "22Oct" },
+              { id: "INTERVIEWS", label: "INTERVIEWS" }
+            ]
+          },
+          {
+            id: "kattu_eu_regional",
+            name: "Projects KattuAI — EU Regional Job Research",
+            spreadsheetId: "1wi4i3qpDLOzfNXa5_AR6Bvhb4w40xTr4QQmM9qGAzj4",
+            sourceId: "kattu_eu_regional",
+            fileType: "google_sheet",
+            category: "remote_jobs",
+            description: "Dynamic dated remote and visa engineering research across Continental Europe and Cyprus.",
+            externalUrl: "https://docs.google.com/spreadsheets/d/1wi4i3qpDLOzfNXa5_AR6Bvhb4w40xTr4QQmM9qGAzj4/edit",
+            tabs: [
+              { id: "ALL ROLES", label: "ALL ROLES" },
+              { id: "20Oct", label: "20Oct" },
+              { id: "21Oct", label: "21Oct" },
+              { id: "22Oct", label: "22Oct" },
+              { id: "CYPRUS ROLES", label: "CYPRUS ROLES" }
+            ]
+          },
+          {
+            id: "kattu_uk_regional",
+            name: "Projects KattuAI — UK Regional Job Research",
+            spreadsheetId: "1ECo6MFxrDXpOQlTyCRGor5XUgE8e4t2zL-LXWJRFN5A",
+            sourceId: "kattu_uk_regional",
+            fileType: "google_sheet",
+            category: "remote_jobs",
+            description: "Dynamic dated technology research for UK graduate schemes and trainee engineering.",
+            externalUrl: "https://docs.google.com/spreadsheets/d/1ECo6MFxrDXpOQlTyCRGor5XUgE8e4t2zL-LXWJRFN5A/edit",
+            tabs: [
+              { id: "ALL ROLES", label: "ALL ROLES" },
+              { id: "20Oct", label: "20Oct" },
+              { id: "21Oct", label: "21Oct" },
+              { id: "22Oct", label: "22Oct" },
+              { id: "GRADUATE TRACK", label: "GRADUATE TRACK" }
+            ]
+          },
+          {
+            id: "kattu_usa_regional",
+            name: "Projects KattuAI — USA Regional Job Research",
+            spreadsheetId: "1tIi0TiQ0L1fNUcqTWTsRVJhV-69g3pbrHGGkhmGGvyo",
+            sourceId: "kattu_usa_regional",
+            fileType: "google_sheet",
+            category: "remote_jobs",
+            description: "Dynamic dated remote roles for global/EMEA contractor authorization in US organizations.",
+            externalUrl: "https://docs.google.com/spreadsheets/d/1tIi0TiQ0L1fNUcqTWTsRVJhV-69g3pbrHGGkhmGGvyo/edit",
+            tabs: [
+              { id: "ALL ROLES", label: "ALL ROLES" },
+              { id: "20Oct", label: "20Oct" },
+              { id: "21Oct", label: "21Oct" },
+              { id: "22Oct", label: "22Oct" },
+              { id: "GLOBAL CONTRACTOR", label: "GLOBAL CONTRACTOR" }
             ]
           }
         ]
       },
       {
-        id: "f_tech_hubs",
-        name: "Tech Hub Trackers",
-        description: "Dedicated trackers for European technology centers.",
+        id: "f_qa_audit",
+        name: "Daily QA & Verification Engine",
+        description: "Data quality checks, URL health verification, and gating logs.",
         sheets: [
           {
-            id: "sheet_tech_hubs_tracker",
-            name: "Berlin, Amsterdam & Dublin Trackers",
-            fileType: "xlsx",
+            id: "kattu_daily_qa_audit",
+            name: "Projects KattuAI — Daily Data QA & Verification",
+            sourceId: "kattu_daily_qa_audit",
+            fileType: "google_sheet",
             category: "remote_jobs",
-            description: "Direct-to-engineering leads across major European tech capitals.",
+            description: "Internal QA verification log ensuring data integrity across the fleet.",
             tabs: [
-              { id: "BERLIN TECH", label: "BERLIN TECH" },
-              { id: "AMSTERDAM TECH", label: "AMSTERDAM TECH" },
-              { id: "DUBLIN FINTECH", label: "DUBLIN FINTECH" }
+              { id: "DAILY QA", label: "DAILY QA" },
+              { id: "AUDIT LOG", label: "AUDIT LOG" },
+              { id: "URL CHECKS", label: "URL CHECKS" }
             ]
           }
         ]
@@ -397,56 +548,14 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
     ]
   },
 
-  // 4. Haya Arsh workspace
+  // 4. Haya Arsh workspace (Placeholder Only)
   {
     id: "ws_haya_arsh",
     name: "Haya Arsh workspace",
     ownerAgentId: "haya_arsh",
-    description: "Haya Arsh's academic intelligence workspace covering university admissions and funded scholarships.",
+    description: "Haya Arsh / Workspace not configured yet / No data sources connected.",
     sheets: [],
-    folders: [
-      {
-        id: "f_masters_programmes_scholarships",
-        name: "Master's Programmes & Funded Scholarships",
-        description: "Canonical Master's workbook tracking EU/Cyprus degrees and 40% alumni grants.",
-        sheets: [
-          {
-            id: "masters_workbook",
-            name: "master-spreadsheet.xlsx",
-            driveId: "156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj",
-            spreadsheetId: "156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj",
-            sourceId: "masters_workbook",
-            fileType: "xlsx",
-            category: "masters_scholarships",
-            description: "Academic master's and scholarship spreadsheet across UCLan Cyprus and Erasmus Mundus.",
-            externalUrl: "https://docs.google.com/spreadsheets/d/156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj/edit",
-            tabs: [
-              { id: "MASTER_PROGRAMMES", label: "MASTER_PROGRAMMES" },
-              { id: "SCHOLARSHIPS", label: "SCHOLARSHIPS" }
-            ]
-          }
-        ]
-      },
-      {
-        id: "f_admissions_staging",
-        name: "Admissions Staging & Documents",
-        description: "Application documentation, transcript reviews, and submission timelines.",
-        sheets: [
-          {
-            id: "sheet_admissions_deadlines",
-            name: "Admissions Applications & Deadlines",
-            fileType: "xlsx",
-            category: "masters_scholarships",
-            description: "Structured deadlines for UCLan Cyprus MSc Computing and European consortia.",
-            tabs: [
-              { id: "UCLan CYPRUS", label: "UCLan CYPRUS (40% ALUMNI)" },
-              { id: "ERASMUS MUNDUS", label: "ERASMUS MUNDUS" },
-              { id: "EU MSc", label: "EU MSc PROGRAMMES" }
-            ]
-          }
-        ]
-      }
-    ]
+    folders: []
   },
 
   // 5. Job Apply
@@ -680,16 +789,36 @@ export function filterOpportunitiesForSheetTab(
   tabId?: string
 ): OpportunityRecord[] {
   // 1. Filter by category if sheet has a specific pipeline category
-  const records = sheet.category === "all"
+  let records = sheet.category === "all"
     ? opportunities
     : opportunities.filter((o) => o.category === sheet.category);
+
+  // 1a. Explicit Muse_Satnam source isolation: only genuine satnam_* discoveries appear in Muse_Satnam operational sheets
+  if (sheet.sourceId && sheet.sourceId.startsWith("satnam_")) {
+    records = records.filter((o) => {
+      const rawSourceId = (o as { source_id?: string }).source_id;
+      if (rawSourceId === sheet.sourceId) return true;
+      if (Array.isArray(o.agent_provenance) && o.agent_provenance.some((p) => p.sourceId === sheet.sourceId)) return true;
+      return false;
+    });
+  }
+
+  // 1b. Dedicated Graduate Schemes Tracker discovery source isolation
+  if (sheet.id === "graduate_schemes_tracker") {
+    records = records.filter((o) => {
+      const rawSourceId = (o as { source_id?: string }).source_id;
+      if (rawSourceId === "graduate_schemes_tracker") return true;
+      const title = (o.title || "").toLowerCase();
+      return title.includes("graduate") || title.includes("trainee") || title.includes("intern");
+    });
+  }
 
   if (!tabId) return records;
 
   const tab = sheet.tabs.find((t) => t.id === tabId);
   if (tab?.filterFn) {
     const res = records.filter(tab.filterFn);
-    if (res.length > 0) return res;
+    return res;
   }
 
   // 2. Intelligent tab resolution by canonical tab identity

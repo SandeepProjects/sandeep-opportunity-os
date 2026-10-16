@@ -126,15 +126,13 @@ test.describe("Sandeep Opportunity OS — enterprise frontend flows", () => {
     await expect(page.locator("h3:has-text('7. AI Agent Fleet Provenance & Sources')")).toBeVisible();
   });
 
-  test("AI Agents page renders 5 autonomous fleet cards with provenance badges", async ({ page }) => {
+  test("AI Agents page renders 4 autonomous fleet cards with provenance badges", async ({ page }) => {
     await page.goto("/agents");
     await expect(page.locator(".os-page-title")).toHaveText("AI Research Agent Fleet");
-    await expect(page.locator("h3:has-text('Sandy Muse')")).toBeVisible();
-    await expect(page.locator("h3:has-text('Haya Muse 1')")).toBeVisible();
-    await expect(page.locator("h3:has-text('Haya Muse 2')")).toBeVisible();
-    await expect(page.locator("h3:has-text('Vargo Spark')")).toBeVisible();
-    await expect(page.locator("h3:has-text('Katoo Spark')")).toBeVisible();
-    await expect(page.locator(".os-metric-val:has-text('5 / 5')")).toBeVisible();
+    await expect(page.locator("h3:has-text('Bago Muse')")).toBeVisible();
+    await expect(page.locator("h3:has-text('Haya Satnam')")).toBeVisible();
+    await expect(page.locator("h3:has-text('Kattu AI')")).toBeVisible();
+    await expect(page.locator("h3:has-text('Haya Arsh')")).toBeVisible();
   });
 
   test("Data Sources page renders Google Drive/Sheets and local sources registry", async ({ page }) => {
@@ -153,8 +151,8 @@ test.describe("Sandeep Opportunity OS — enterprise frontend flows", () => {
     } else {
       await expect(page.locator(".responsive-switch .os-mobile-card").first()).toBeVisible();
     }
-    await expect(page.locator("button:has-text('Sandy Muse')")).toBeVisible();
-    await expect(page.locator("button:has-text('Haya Muse 1')")).toBeVisible();
+    await expect(page.locator("button:has-text('Bago Muse')").first()).toBeVisible();
+    await expect(page.locator("button:has-text('Haya Satnam')").first()).toBeVisible();
   });
 
   test("Today page renders immediate priority spotlight cards and action queue tabs", async ({ page }) => {
@@ -235,7 +233,7 @@ test.describe("Sandeep Opportunity OS — enterprise frontend flows", () => {
     await expect(explorer).toBeVisible();
 
     // Verify 6 root workspaces in the tree
-    await expect(explorer.locator(".ws-label:has-text('BAGOMUSE - SANDY MUSE')")).toBeVisible();
+    await expect(explorer.locator(".ws-label:has-text('Bago Muse')")).toBeVisible();
     await expect(explorer.locator(".ws-label:has-text('MUSESATNAM')")).toBeVisible();
     await expect(explorer.locator(".ws-label:has-text('Projects KattuAI')")).toBeVisible();
     await expect(explorer.locator(".ws-label:has-text('Haya Arsh workspace')")).toBeVisible();

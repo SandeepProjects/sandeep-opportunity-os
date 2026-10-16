@@ -109,7 +109,10 @@ export function canonicalizeUrl(rawUrl) {
 export function computeFingerprint(rec) {
   const cat = (rec.category || "").toLowerCase().trim();
   const org = (rec.organization || rec.organization_name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const title = (rec.title || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const title = (rec.title || "")
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[^a-z0-9]/g, "");
   return `${cat}::${org}::${title}`;
 }
 
@@ -764,6 +767,114 @@ export function normalizeScholarshipRow(row, index = 0) {
   };
 }
 
+export function isDatedTab(tabTitle) {
+  if (!tabTitle || typeof tabTitle !== "string") return false;
+  return /^[0-9]{1,2}[A-Za-z]{3}/i.test(tabTitle.trim());
+}
+
+export function normalizeRegionalResearchRow(row, index = 0, {
+  agentId = "kattu_ai",
+  sourceId = "kattu_regional_sheet",
+  sourceName = "Projects KattuAI Regional Sheet",
+  sourceTab = "Dynamic Dated Tab"
+} = {}) {
+  const get = (keys) => {
+    for (const k of keys) {
+      if (row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== "") {
+        return String(row[k]).trim();
+      }
+    }
+    return "";
+  };
+
+  const title = get(["Role", "Title", "Position", "Job Title", "role", "title"]) || `Remote Opportunity ${index + 1}`;
+  const org = get(["Company", "Organization", "Employer", "company", "organization"]) || "Verified Enterprise";
+  const rawUrl = get(["URL", "Link", "Job Link", "Apply Link", "source_url", "url"]);
+  const location = get(["Location", "Country", "Region", "location"]) || "Remote (EMEA / Global)";
+  const platform = get(["Platform", "Source", "Board", "platform"]) || "Regional Fleet";
+  const notes = get(["Notes", "Description", "Details", "notes"]);
+
+  const canonUrl = canonicalizeUrl(rawUrl);
+  const id = generateDeterministicId("remote_jobs", canonUrl || `${org}::${title}::${index}`);
+
+  return {
+    id,
+    category: "remote_jobs",
+    title,
+    organization: org,
+    location,
+    country: location.includes("India") ? "IN" : location.includes("UK") ? "GB" : location.includes("Cyprus") ? "CY" : "EU",
+    source_url: rawUrl || canonUrl || "",
+    canonical_source_url: canonUrl || rawUrl || "",
+    source_type: "REGIONAL_RESEARCH_SCAN",
+    discovered_by_agent: agentId,
+    agent_provenance: [
+      {
+        agent_id: agentId,
+        agentId,
+        agentName: "Kattu AI",
+        source_id: sourceId,
+        sourceId,
+        sourceName,
+        source_tab: sourceTab,
+        sourceTab,
+        sourceRowRef: `Row ${index + 2}`,
+        sourceUrl: rawUrl || canonUrl || "",
+        firstSeenAt: new Date().toISOString().slice(0, 10),
+        lastSeenAt: new Date().toISOString().slice(0, 10),
+        lastVerifiedAt: new Date().toISOString().slice(0, 10)
+      }
+    ],
+    last_verified_at: new Date().toISOString().slice(0, 10),
+    is_active: true,
+    confidence: "High",
+    score_total: 82,
+    score_components: [
+      { key: "timezone", label: "Cyprus UTC+2 Alignment", points: 30, max_points: 30 },
+      { key: "remote_policy", label: "Contractor Remote Feasibility", points: 28, max_points: 35 },
+      { key: "tech_stack", label: "Frontend/Fullstack Engineering Stack", points: 24, max_points: 35 }
+    ],
+    details: {
+      platform,
+      notes,
+      regional_fleet: true,
+      dated_tab: sourceTab,
+      agent_provenance: [
+        {
+          agent_id: agentId,
+          agentId,
+          agentName: "Kattu AI",
+          source_id: sourceId,
+          sourceId,
+          sourceName,
+          source_tab: sourceTab,
+          sourceTab,
+          sourceRowRef: `Row ${index + 2}`,
+          sourceUrl: rawUrl || canonUrl || "",
+          firstSeenAt: new Date().toISOString().slice(0, 10)
+        }
+      ]
+    },
+    user_status: "New",
+    priority: "P2",
+    favorite: false,
+    follow_up_date: null,
+    personal_notes: "",
+    workflow: {
+      status: "New",
+      priority: "P2",
+      favorite: false,
+      follow_up_date: null,
+      contacted_date: null,
+      applied_date: null,
+      personal_notes: ""
+    },
+    activity_history: [
+      { at: new Date().toISOString(), label: `Discovered by ${agentId} in tab ${sourceTab}` }
+    ]
+  };
+}
+
 /**
  * STRICT USER CRM FIELD PRESERVATION
  * Guarantees Sandeep's 7 user-owned CRM fields are NEVER overwritten:
@@ -864,19 +975,32 @@ export function preserveUserCrmFields(existing, incoming) {
   const seenAgentProv = new Set();
   const combinedAgentProvenance = [];
   for (const ap of rawAgentProv) {
-    if (!ap || !ap.agentId) continue;
-    const key = `${ap.agentId}::${ap.sourceId}::${ap.sourceTab || ""}`;
+    if (!ap) continue;
+    const aId = ap.agent_id || ap.agentId;
+    if (!aId) continue;
+    const sId = ap.source_id || ap.sourceId || "";
+    const sTab = ap.source_tab || ap.sourceTab || "";
+    const key = `${aId}::${sId}::${sTab}`;
     if (!seenAgentProv.has(key)) {
       seenAgentProv.add(key);
-      combinedAgentProvenance.push(ap);
+      combinedAgentProvenance.push({
+        ...ap,
+        agent_id: aId,
+        agentId: aId,
+        source_id: sId,
+        sourceId: sId,
+        source_tab: sTab,
+        sourceTab: sTab
+      });
     }
   }
 
   const primaryAgent =
     existing.discovered_by_agent ||
     incoming.discovered_by_agent ||
+    combinedAgentProvenance[0]?.agent_id ||
     combinedAgentProvenance[0]?.agentId ||
-    "sandy_muse";
+    "bago_muse";
 
   return {
     ...incoming,
@@ -1000,7 +1124,7 @@ export function normalizeAndMergeRecords(incomingRaw, existingRecords = []) {
     if (rec.id) existingById.set(rec.id, rec);
     const fp = computeFingerprint(rec);
     if (fp) existingByFp.set(fp, rec);
-    const cUrl = canonicalizeUrl(rec.source_url || rec.canonical_source_url || "");
+    const cUrl = canonicalizeUrl(rec.canonical_source_url || rec.source_url || "");
     if (cUrl) existingByUrl.set(cUrl, rec);
   }
 
@@ -1009,21 +1133,15 @@ export function normalizeAndMergeRecords(incomingRaw, existingRecords = []) {
   let preservedCount = 0;
   let gatedCount = 0;
 
-  const processed = [];
+  const processedById = new Map();
   const seenFp = new Set();
   const seenUrls = new Set();
 
   for (const raw of incomingRaw) {
     const fp = computeFingerprint(raw);
-    const cUrl = canonicalizeUrl(raw.source_url || raw.canonical_source_url || "");
+    const cUrl = canonicalizeUrl(raw.canonical_source_url || raw.source_url || "");
 
-    // Internal deduplication within incoming batch
-    if (cUrl && seenUrls.has(cUrl)) continue;
-    if (fp && seenFp.has(fp)) continue;
-    if (cUrl) seenUrls.add(cUrl);
-    if (fp) seenFp.add(fp);
-
-    // Find match in existing records
+    // Find match in existing records or records already merged during this run
     const match =
       existingById.get(raw.id) ||
       (cUrl ? existingByUrl.get(cUrl) : null) ||
@@ -1042,24 +1160,33 @@ export function normalizeAndMergeRecords(incomingRaw, existingRecords = []) {
 
     if (match) {
       const merged = preserveUserCrmFields(match, scoredRaw);
-      processed.push(merged);
+      processedById.set(merged.id, merged);
+      existingById.set(merged.id, merged);
+      if (cUrl) existingByUrl.set(cUrl, merged);
+      if (fp) existingByFp.set(fp, merged);
       updatedCount++;
       preservedCount++;
     } else {
-      processed.push(scoredRaw);
+      processedById.set(scoredRaw.id, scoredRaw);
+      existingById.set(scoredRaw.id, scoredRaw);
+      if (cUrl) existingByUrl.set(cUrl, scoredRaw);
+      if (fp) existingByFp.set(fp, scoredRaw);
       addedCount++;
     }
+
+    if (cUrl) seenUrls.add(cUrl);
+    if (fp) seenFp.add(fp);
   }
 
   // Preserve existing records that were not in incoming raw batch
-  const processedIds = new Set(processed.map((p) => p.id));
   for (const ex of existingRecords) {
-    if (!processedIds.has(ex.id)) {
-      processed.push(ex);
+    if (!processedById.has(ex.id)) {
+      processedById.set(ex.id, ex);
       preservedCount++;
     }
   }
 
+  const processed = Array.from(processedById.values());
   const activeCount = processed.filter((p) => p.is_active).length;
 
   return {
@@ -1115,7 +1242,8 @@ export async function runCanonicalSync({
   neonDatabaseUrl,
   currentRecords = [],
   fetchFn = globalThis.fetch,
-  dryRun = false
+  dryRun = false,
+  triggerType = "AUTOMATIC_5H"
 } = {}) {
   const startedAt = new Date();
   const startTime = startedAt.getTime();
@@ -1655,7 +1783,7 @@ export async function runCanonicalSync({
           inserted_count, updated_count, unchanged_count, user_fields_preserved,
           telemetry
         ) VALUES (
-          ${runId}, 'AUTOMATIC_5H', ${overallStatus}, ${startedAt.toISOString()}, NOW(), ${durationSec},
+          ${runId}, ${triggerType}, ${overallStatus}, ${startedAt.toISOString()}, NOW(), ${durationSec},
           ${sourceDiagnostics.length}, ${sourceDiagnostics.filter((s) => s.status === 'Connected').length},
           ${sourceDiagnostics.filter((s) => s.status !== 'Connected').length},
           ${newlyIngestedRaw.length}, ${newlyIngestedRaw.length}, ${mergeResult.merged.length},

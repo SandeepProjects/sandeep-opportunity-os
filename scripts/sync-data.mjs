@@ -20,11 +20,11 @@ const seedPath = path.resolve(__dirname, "../src/data/verified_seed_24.json");
 export async function runServerSync(options = {}) {
   // Read .env.local if present
   const envLocalPath = path.resolve(__dirname, "../.env.local");
-  let envDbUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+  let envDbUrl = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.VITE_NEON_DATABASE_URL;
   if (!envDbUrl && fs.existsSync(envLocalPath)) {
     const lines = fs.readFileSync(envLocalPath, "utf8").split("\n");
     for (const l of lines) {
-      const match = l.match(/^DATABASE_URL=(.+)$/);
+      const match = l.match(/^(?:DATABASE_URL|VITE_NEON_DATABASE_URL|NEON_DATABASE_URL)=(.+)$/);
       if (match) {
         envDbUrl = match[1].trim();
         break;
@@ -73,7 +73,8 @@ export async function runServerSync(options = {}) {
     neonDatabaseUrl,
     currentRecords,
     fetchFn,
-    dryRun: Boolean(options.dryRun)
+    dryRun: Boolean(options.dryRun),
+    triggerType: options.triggerType || (isMainModule ? "SCHEDULED_5H" : "AUTOMATIC_5H")
   });
 
   const { telemetry, records, pipelineCounts } = result;

@@ -159,19 +159,19 @@ const MainContent: React.FC = () => {
         tId = "ALL LEADS";
       } else if (agent.id === "kattu_ai") {
         wsId = "ws_kattu";
-        fId = "f_emea_remote";
-        sId = "sheet_remote_devs";
-        tId = "ACTIVE REMOTE";
+        fId = "f_regional_fleet";
+        sId = "kattu_india_regional";
+        tId = "ALL ROLES";
       } else if (agent.id === "haya_satnam") {
         wsId = "ws_musesatnam";
-        fId = "f_cyprus_visa";
-        sId = "master_job_application_tracker";
-        tId = "All Applications";
+        fId = "f_global_jobs";
+        sId = "satnam_global_jobs";
+        tId = "All Roles";
       } else if (agent.id === "haya_arsh") {
         wsId = "ws_haya_arsh";
-        fId = "f_masters_programmes_scholarships";
-        sId = "masters_workbook";
-        tId = "MASTER_PROGRAMMES";
+        fId = undefined;
+        sId = undefined;
+        tId = undefined;
       }
 
       const next: ExplorerSelection = {

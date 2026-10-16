@@ -10,6 +10,7 @@ import {
   getDataSources as getDataSourcesJs,
   getDataSourceById as getDataSourceByIdJs,
   getDataSourcesByCategory as getDataSourcesByCategoryJs,
+  getDataSourcesByAgent as getDataSourcesByAgentJs,
   getNextScheduledSync as getNextScheduledSyncJs
 } from "./dataSources.mjs";
 
@@ -30,6 +31,7 @@ export type DataSourceStatus =
   | "Connected (DB)";
 
 export type SyncMode =
+  | "AUTOMATIC_5H"
   | "AUTOMATIC_6H"
   | "MANUAL_ONLY"
   | "LOCAL_ONLY"
@@ -87,6 +89,12 @@ export const getDataSourcesByCategory: (
   category: "sheets" | "drive" | "local" | "supabase" | "legacy"
 ) => DataSourceResource[] = getDataSourcesByCategoryJs as unknown as (
   category: "sheets" | "drive" | "local" | "supabase" | "legacy"
+) => DataSourceResource[];
+
+export const getDataSourcesByAgent: (
+  agentId: string
+) => DataSourceResource[] = getDataSourcesByAgentJs as unknown as (
+  agentId: string
 ) => DataSourceResource[];
 
 export const getNextScheduledSync: (referenceTime?: Date) => {

@@ -17,6 +17,8 @@ export {
   normalizeMasterJobTrackerRow,
   normalizeMasterProgrammeRow,
   normalizeScholarshipRow,
+  normalizeRegionalResearchRow,
+  isDatedTab,
   preserveUserCrmFields,
   evaluateGating,
   normalizeAndMergeRecords,

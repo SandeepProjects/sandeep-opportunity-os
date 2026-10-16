@@ -347,9 +347,9 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                           fontSize: "10.5px",
                           whiteSpace: "nowrap"
                         }}
-                        title={`Discovered by ${provs.map((p) => p.agentName).join(", ")}`}
+                        title={`Discovered by ${provs.map((p) => (p?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse")).join(", ")}`}
                       >
-                        {firstProv?.agentName?.replace("Sandy Muse", "Bago Muse") || "Bago Muse"}
+                        {(firstProv?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse")}
                         {provs.length > 1 && (
                           <span style={{ marginLeft: 3, fontWeight: 700, color: "var(--accent-primary)" }}>
                             +{provs.length - 1}

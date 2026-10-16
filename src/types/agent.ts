@@ -12,6 +12,11 @@
 import type { PipelineCategory } from "./opportunity";
 
 export type AgentId =
+  | "bago_muse"
+  | "haya_satnam"
+  | "kattu_ai"
+  | "haya_arsh"
+  | "system"
   | "sandy_muse"
   | "haya_muse_1"
   | "haya_muse_2"
@@ -24,17 +29,24 @@ export type AgentHealthStatus =
   | "Waiting"
   | "Stale"
   | "Permission Required"
+  | "Setup Required"
   | "Failed";
 
 export interface AgentConfig {
   id: AgentId;
   name: string;
+  slug?: string;
   codename: string;
   role: string;
   sourceType: string;
   avatarIcon: string;
   themeColor: string;
   accentBg: string;
+  status?: "active" | "inactive" | "paused" | "error" | "setup_required";
+  workspaceType?: string;
+  driveRootId?: string | null;
+  driveRootName?: string | null;
+  ownerAccountLabel?: string;
   assignedPipelines: PipelineCategory[];
   connectedSources: string[]; // DataSourceResource IDs
   updateSchedule: string; // e.g. "Every 6–8 hours"

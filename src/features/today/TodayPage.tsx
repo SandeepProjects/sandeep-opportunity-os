@@ -252,7 +252,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                         fontSize: "10.5px"
                       }}
                     >
-                      {agent?.name || "Sandy Muse"}
+                      {agent?.name || "Bago Muse"}
                     </span>
                     <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
                       {formatCategoryName(item.category)}
@@ -424,7 +424,7 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                           whiteSpace: "nowrap"
                         }}
                       >
-                        {agent?.name || "Sandy Muse"}
+                        {agent?.name || "Bago Muse"}
                       </span>
                     </td>
                     <td>

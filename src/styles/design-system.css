@@ -1608,6 +1608,11 @@ textarea {
   border: 1.5px solid var(--bg-surface);
 }
 
+.os-agent-status-dot.idle,
+.os-agent-status-dot.setup_required {
+  background-color: var(--text-tertiary, #94a3b8);
+}
+
 .os-agent-meta {
   flex: 1 1 0%;
   min-width: 0;

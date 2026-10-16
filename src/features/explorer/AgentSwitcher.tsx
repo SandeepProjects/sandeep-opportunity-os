@@ -41,8 +41,8 @@ export const AgentSwitcher: React.FC<AgentSwitcherProps> = ({
               >
                 {agent.initials}
                 <span
-                  className="os-agent-status-dot"
-                  title="Agent Online & Monitoring"
+                  className={`os-agent-status-dot ${agent.status}`}
+                  title={agent.status === "online" ? "Agent Online & Monitoring" : "Setup Required / Inactive"}
                   aria-hidden="true"
                 />
               </div>

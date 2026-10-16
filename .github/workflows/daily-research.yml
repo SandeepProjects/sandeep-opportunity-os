@@ -1,4 +1,4 @@
-name: 5-Hour Opportunity Research Ingestion & Sheets Sync
+name: 5-Hour Opportunity Research Ingestion & Server Sync (Neon Canonical)
 
 on:
   schedule:
@@ -7,14 +7,17 @@ on:
 
 jobs:
   research-and-sync:
-    name: 6-Hour Ingestion & Idempotent Sync
+    name: 5-Hour Server Ingestion & Idempotent Sync
     runs-on: ubuntu-latest
     env:
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      GOOGLE_SHEET_ID: ${{ secrets.VITE_GOOGLE_SHEET_ID }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.VITE_NEON_DATABASE_URL }}
+      VITE_NEON_DATABASE_URL: ${{ secrets.VITE_NEON_DATABASE_URL || secrets.DATABASE_URL }}
       GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
       GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
+      GOOGLE_SHEET_ID: ${{ secrets.VITE_GOOGLE_SHEET_ID }}
+      # Supabase Rollback Fallback
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -27,8 +30,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Execute 6-Hour Ingestion & Sync Runner
-        run: npm run sync:data
+      - name: Execute 5-Hour Canonical Ingestion & Sync Runner
+        run: node scripts/sync-data.mjs
 
-      - name: Execute Staged Research Runner
-        run: node src/pipeline/dailyResearchRunner.mjs --dry-run-if-no-secrets

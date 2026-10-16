@@ -1,20 +1,38 @@
 /**
  * Sandeep Opportunity OS — Canonical AI Agent Registry (Runtime MJS)
+ *
+ * Central definition of the 4 AI Research Agents operating for Sandeep:
+ * 1. Bago Muse — Lead Career Operations Scout & Social Freelance Hunter
+ * 2. Haya Satnam — Global Employment & Regional Market Expansion Hunter (Muse_Satnam)
+ * 3. Kattu AI — Regional Job Intelligence & Daily QA Verification Engine (Projects KattuAI)
+ * 4. Haya Arsh — Academic & Funded Scholarship Scout (Placeholder awaiting configuration)
  */
 
 export const AGENT_REGISTRY = [
   {
-    id: "sandy_muse",
-    name: "Sandy Muse",
-    codename: "MUSE-01-SCOUT",
-    role: "Lead AI Intelligence Scout & Social Hunter",
-    sourceType: "Native Google Sheet (v4 API) & Social Feeds",
+    id: "bago_muse",
+    name: "Bago Muse",
+    slug: "bago-muse",
+    codename: "MUSE-01-BAGO",
+    role: "Lead Career Operations Scout & Social Freelance Hunter",
+    status: "active",
+    workspaceType: "Google Drive & Sheets",
+    driveRootId: "1HNfO3cJ56CPOgiMXiokwigS7hkbsUy5V",
+    driveRootName: "JOB_CMS_AGENTS / BAGOMUSE",
+    ownerAccountLabel: "Sandeep Gautam (Career Operations)",
+    sourceType: "Native Google Sheet (v4 API) & Drive OpenXML",
     avatarIcon: "sparkles",
     themeColor: "#3b82f6",
     accentBg: "rgba(59, 130, 246, 0.12)",
-    assignedPipelines: ["freelance_leads", "visa_jobs"],
-    connectedSources: ["muse_social_job_hunter", "local_social_hunter"],
-    updateSchedule: "Every 6–8 hours (Scheduled independently)",
+    assignedPipelines: ["freelance_leads", "visa_jobs", "masters_scholarships"],
+    connectedSources: [
+      "muse_social_job_hunter",
+      "graduate_schemes_tracker",
+      "master_job_application_tracker",
+      "masters_workbook",
+      "job_apply_root"
+    ],
+    updateSchedule: "Every 5 hours (Automated Ingestion Daemon)",
     lastAgentUpdate: new Date(Date.now() - 2.5 * 3600 * 1000).toISOString(),
     lastCmsIngestion: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
     health: "Healthy",
@@ -24,7 +42,7 @@ export const AGENT_REGISTRY = [
     gatedCount: 0,
     errorMessage: null,
     description:
-      "Autonomously scans Facebook groups, Instagram feeds, developer communities, and Cypriot business forums for active software, frontend, and website overhaul leads.",
+      "Main career operations & research environment: Social Job Hunter, Graduate Schemes, EU Job Help, Web Client / Freelance Leads, Masters Help, and Recruitment Agencies.",
     capabilities: [
       "Open-ended multi-page range ingestion across 33 columns",
       "DOM & social text analysis for developer hiring signals",
@@ -33,34 +51,41 @@ export const AGENT_REGISTRY = [
     ]
   },
   {
-    id: "haya_muse_1",
-    name: "Haya Muse 1",
-    codename: "MUSE-02-CAREERS",
-    role: "Enterprise Application & Visa Employment Hunter",
-    sourceType: "Drive OpenXML XLSX & Staged Application Packs",
+    id: "haya_satnam",
+    name: "Haya Satnam",
+    slug: "haya-satnam",
+    codename: "MUSE-02-SATNAM",
+    role: "Global Employment & Regional Market Expansion Hunter",
+    status: "active",
+    workspaceType: "Google Drive & Sheets",
+    driveRootId: "1sLbCzLwWZzRcihxM5LlyrZokxtmw_Dj-",
+    driveRootName: "Muse_Satnam",
+    ownerAccountLabel: "Muse_Satnam Account",
+    sourceType: "Drive Workbooks & Regional Sheets",
     avatarIcon: "briefcase",
     themeColor: "#10b981",
     accentBg: "rgba(16, 185, 129, 0.12)",
-    assignedPipelines: ["visa_jobs"],
+    assignedPipelines: ["visa_jobs", "freelance_leads"],
     connectedSources: [
-      "master_job_application_tracker",
-      "job_apply_root",
-      "job_apply_pending",
-      "job_apply_ready_for_approval",
-      "job_apply_applied",
-      "job_apply_trackers"
+      "satnam_global_jobs",
+      "satnam_global_pipeline",
+      "satnam_portal_directory",
+      "satnam_hpv_prospecting",
+      "satnam_businesslending_social",
+      "satnam_system_registry"
     ],
-    updateSchedule: "Every 6–8 hours (Scheduled independently)",
+    updateSchedule: "Every 5 hours (Automated Ingestion Daemon)",
     lastAgentUpdate: new Date(Date.now() - 3.2 * 3600 * 1000).toISOString(),
     lastCmsIngestion: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
     health: "Healthy",
-    recordsDiscovered: 1742,
-    recordsAccepted: 1680,
-    duplicateCount: 62,
-    gatedCount: 14,
+    recordsDiscovered: 0,
+    legacyRecordsInherited: 1605,
+    recordsAccepted: 0,
+    duplicateCount: 0,
+    gatedCount: 0,
     errorMessage: null,
     description:
-      "Orchestrates enterprise job applications, graduate engineering schemes, and Cyprus/EU visa-sponsoring roles across Facebook, Instagram, and LinkedIn portals.",
+      "Dedicated Muse_Satnam workspace: Global Jobs & Freelance (Canada, South America, MENA, Japan, India, South Korea), Global Application Pipeline, Portal Directory, HPV Prospecting, and BusinessLending.uk. Preserves 1,605 historical records from legacy Haya Muse 1 & 2.",
     capabilities: [
       "Multi-tab OpenXML parsing (All Applications, Pending Actions, Threads)",
       "Strict Seniority Gate enforcement (<2 yr early-career filtering)",
@@ -69,102 +94,74 @@ export const AGENT_REGISTRY = [
     ]
   },
   {
-    id: "haya_muse_2",
-    name: "Haya Muse 2",
-    codename: "MUSE-03-SCHOLAR",
-    role: "Academic & Funded Scholarship Intelligence Scout",
-    sourceType: "Drive OpenXML XLSX & Admissions Portals",
-    avatarIcon: "graduation",
-    themeColor: "#8b5cf6",
-    accentBg: "rgba(139, 92, 246, 0.12)",
-    assignedPipelines: ["masters_scholarships"],
-    connectedSources: [
-      "masters_workbook",
-      "masters_admissions_folder"
-    ],
-    updateSchedule: "Every 6–8 hours (Scheduled independently)",
-    lastAgentUpdate: new Date(Date.now() - 4.1 * 3600 * 1000).toISOString(),
-    lastCmsIngestion: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-    health: "Healthy",
-    recordsDiscovered: 49,
-    recordsAccepted: 49,
-    duplicateCount: 0,
-    gatedCount: 0,
-    errorMessage: null,
-    description:
-      "Tracks fully-funded MSc programmes, university alumni discounts (UCLan Cyprus 40%), Erasmus Mundus scholarships, and 2026/2027 admissions rounds.",
-    capabilities: [
-      "Dedicated extraction for programmes (21) and scholarships (28)",
-      "Funding coverage calculation (tuition waiver, living stipend, net fee)",
-      "Admissions deadline tracking and prerequisite document auditing",
-      "Double UK + Cyprus MSc degree opportunity verification"
-    ]
-  },
-  {
-    id: "vargo_spark",
-    name: "Vargo Spark",
-    codename: "SPARK-01-OUTREACH",
-    role: "Direct Outreach & IT Agency Pipeline Specialist",
-    sourceType: "Local Workbooks, Recruiter Feeds & CSV Indexes",
-    avatarIcon: "zap",
+    id: "kattu_ai",
+    name: "Kattu AI",
+    slug: "kattu-ai",
+    codename: "KATTU-01-SPARK",
+    role: "Regional Job Intelligence & Daily QA Verification Engine",
+    status: "active",
+    workspaceType: "Regional Research Sheets",
+    driveRootId: "kattu_regional_drive",
+    driveRootName: "Projects KattuAI",
+    ownerAccountLabel: "Argon 4 + Spark Fleet",
+    sourceType: "Google Sheets Regional Research Fleet",
+    avatarIcon: "globe",
     themeColor: "#f59e0b",
     accentBg: "rgba(245, 158, 11, 0.12)",
-    assignedPipelines: ["freelance_leads"],
+    assignedPipelines: ["remote_jobs", "visa_jobs"],
     connectedSources: [
-      "local_agency_outreach_log",
-      "local_agencies_final",
-      "local_lead_tracker",
-      "local_outreach_drafts"
+      "kattu_india_regional",
+      "kattu_eu_regional",
+      "kattu_uk_regional",
+      "kattu_usa_regional",
+      "kattu_daily_qa_audit"
     ],
-    updateSchedule: "Every 6–8 hours (Scheduled independently)",
-    lastAgentUpdate: new Date(Date.now() - 5.0 * 3600 * 1000).toISOString(),
-    lastCmsIngestion: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-    health: "Healthy",
-    recordsDiscovered: 38,
-    recordsAccepted: 35,
-    duplicateCount: 3,
-    gatedCount: 0,
-    errorMessage: null,
-    description:
-      "Identifies verified Cyprus and EU IT recruitment agencies, recruiter direct contacts, and cold pitch targets for custom React, Next.js, and WordPress contracts.",
-    capabilities: [
-      "Agency database indexing (Cyprus IT recruiters, European tech agencies)",
-      "Personalized pitch draft generation and portfolio alignment",
-      "Recruiter dispatch logging and follow-up bucket categorization",
-      "Direct hiring manager LinkedIn and email discovery"
-    ]
-  },
-  {
-    id: "katoo_spark",
-    name: "Katoo Spark",
-    codename: "SPARK-02-REMOTE",
-    role: "Remote EMEA & Distributed Developer Scout",
-    sourceType: "Remote Search Feeds & EMEA Region Indexers",
-    avatarIcon: "globe",
-    themeColor: "#06b6d4",
-    accentBg: "rgba(6, 182, 212, 0.12)",
-    assignedPipelines: ["remote_jobs"],
-    connectedSources: [
-      "local_job_trackers",
-      "reports_folder"
-    ],
-    updateSchedule: "Every 6–8 hours (Scheduled independently)",
+    updateSchedule: "Every 5 hours (Automated Ingestion Daemon)",
     lastAgentUpdate: new Date(Date.now() - 5.5 * 3600 * 1000).toISOString(),
     lastCmsIngestion: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
     health: "Healthy",
-    recordsDiscovered: 24,
-    recordsAccepted: 22,
-    duplicateCount: 2,
+    recordsDiscovered: 62,
+    recordsAccepted: 57,
+    duplicateCount: 5,
     gatedCount: 0,
     errorMessage: null,
     description:
-      "Surveys distributed software engineering positions, paid internships, and junior remote contracts compatible with Cyprus / UTC+2 timezone working hours.",
+      "Projects KattuAI regional research fleet (India, EU, UK, USA) powered by Argon 4 + Spark research workflow, dynamic dated tab discovery, and daily data QA.",
     capabilities: [
-      "Regional Restriction Gate (filters out US-only and non-EMEA postings)",
+      "Dynamic dated tab discovery (e.g. 20Oct, 21Oct, 22Oct) without redeployment",
+      "Regional Restriction Gate (filters out non-EMEA postings)",
       "Timezone overlap verification for Cyprus (UTC+2/UTC+3)",
-      "Compensation benchmarking in EUR/GBP/USD",
-      "Junior / entry-level suitability scoring for distributed roles"
+      "Daily data QA, link verification, and duplicate prevention"
     ]
+  },
+  {
+    id: "haya_arsh",
+    name: "Haya Arsh",
+    slug: "haya-arsh",
+    codename: "HAYA-ARSH",
+    role: "Workspace not configured yet",
+    status: "setup_required",
+    workspaceType: "Workspace Placeholder",
+    driveRootId: null,
+    driveRootName: null,
+    ownerAccountLabel: "Unconfigured",
+    sourceType: "Pending Setup",
+    avatarIcon: "folder",
+    themeColor: "#8b5cf6",
+    accentBg: "rgba(139, 92, 246, 0.12)",
+    assignedPipelines: [],
+    connectedSources: [],
+    updateSchedule: "Pending Setup",
+    lastAgentUpdate: "Never",
+    lastCmsIngestion: "Never",
+    health: "Setup Required",
+    recordsDiscovered: 0,
+    recordsAccepted: 0,
+    duplicateCount: 0,
+    gatedCount: 0,
+    errorMessage: "Workspace not configured yet. No data sources connected.",
+    description: "Workspace not configured yet",
+    capabilities: []
   }
 ];
 
@@ -173,7 +170,17 @@ export function getAgents() {
 }
 
 export function getAgentById(id) {
-  return AGENT_REGISTRY.find((a) => a.id === id);
+  if (!id) return undefined;
+  const normalizedId =
+    id === "sandy_muse"
+      ? "bago_muse"
+      : id === "haya_muse_1" || id === "haya_muse_2"
+      ? "haya_satnam"
+      : id === "katoo_spark" || id === "vargo_spark"
+      ? "kattu_ai"
+      : id;
+
+  return AGENT_REGISTRY.find((a) => a.id === normalizedId);
 }
 
 export function getAgentForPipeline(pipeline) {

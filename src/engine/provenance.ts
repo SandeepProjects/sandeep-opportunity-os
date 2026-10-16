@@ -63,15 +63,15 @@ export function resolveOpportunityProvenance(opp: OpportunityRecord): AgentProve
     sourceName = "agencies_final.csv";
     sourceTab = "Cyprus & EU Agencies";
   } else {
-    // Default to Sandy Muse for social freelance leads
-    inferredAgentId = "sandy_muse";
+    // Default to Bago Muse for social freelance leads
+    inferredAgentId = "bago_muse";
     sourceId = "muse_social_job_hunter";
     sourceName = "MUSE | FACEBOOK & INSTAGRAM JOB HUNTER";
     sourceTab = details.platform ? `${String(details.platform).toUpperCase()} LEADS` : "ALL LEADS";
   }
 
   const agent = getAgentById(inferredAgentId);
-  const agentName = agent?.name || "Sandy Muse";
+  const agentName = agent?.name || "Bago Muse";
   const verifiedAt = opp.last_verified_at || new Date().toISOString().slice(0, 10);
 
   const fallbackRecord: AgentProvenance = {
@@ -107,8 +107,8 @@ export function getPrimaryAgentForOpportunity(opp: OpportunityRecord): {
     };
   }
   return {
-    agentId: "sandy_muse",
-    agentName: "Sandy Muse",
+    agentId: "bago_muse",
+    agentName: "Bago Muse",
     sourceName: "MUSE | FACEBOOK & INSTAGRAM JOB HUNTER",
     sourceTab: "ALL LEADS"
   };

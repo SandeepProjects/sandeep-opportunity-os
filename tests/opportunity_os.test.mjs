@@ -776,39 +776,53 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
     assert.ok(preserved.activity_history.length >= 1);
   });
 
-  it("27. AI Agent Registry contains 5 distinct autonomous research agents with correct pipeline bindings", () => {
+  it("27. AI Agent Registry contains 4 distinct autonomous research agents with correct pipeline bindings and backward-compatible alias resolution", () => {
     const agents = getAgents();
-    assert.equal(agents.length, 5);
+    assert.equal(agents.length, 4);
 
     const ids = agents.map((a) => a.id);
-    assert.deepEqual(ids, ["sandy_muse", "haya_muse_1", "haya_muse_2", "vargo_spark", "katoo_spark"]);
+    assert.deepEqual(ids, ["bago_muse", "haya_satnam", "kattu_ai", "haya_arsh"]);
 
-    assert.equal(AGENT_REGISTRY.length, 5);
-    assert.equal(getAgents().length, 5);
-    assert.equal(getAgentForSource("muse_social_job_hunter")?.id, "sandy_muse");
+    assert.equal(AGENT_REGISTRY.length, 4);
+    assert.equal(getAgents().length, 4);
+    assert.equal(getAgentForSource("muse_social_job_hunter")?.id, "bago_muse");
 
-    const sandy = getAgentById("sandy_muse");
-    assert.equal(sandy.name, "Sandy Muse");
-    assert.ok(sandy.assignedPipelines.includes("freelance_leads"));
-    assert.ok(sandy.connectedSources.includes("muse_social_job_hunter"));
+    const bago = getAgentById("bago_muse");
+    assert.equal(bago.name, "Bago Muse");
+    assert.ok(bago.assignedPipelines.includes("freelance_leads"));
+    assert.ok(bago.connectedSources.includes("muse_social_job_hunter"));
 
-    const haya1 = getAgentById("haya_muse_1");
-    assert.equal(haya1.name, "Haya Muse 1");
-    assert.ok(haya1.assignedPipelines.includes("visa_jobs"));
-    assert.ok(haya1.connectedSources.includes("master_job_application_tracker"));
+    // Legacy alias resolution: sandy_muse -> bago_muse
+    const sandyAlias = getAgentById("sandy_muse");
+    assert.equal(sandyAlias.id, "bago_muse");
+    assert.equal(sandyAlias.name, "Bago Muse");
 
-    const haya2 = getAgentById("haya_muse_2");
-    assert.equal(haya2.name, "Haya Muse 2");
-    assert.ok(haya2.assignedPipelines.includes("masters_scholarships"));
-    assert.ok(haya2.connectedSources.includes("masters_workbook"));
+    const haya = getAgentById("haya_satnam");
+    assert.equal(haya.name, "Haya Satnam");
+    assert.ok(haya.assignedPipelines.includes("visa_jobs"));
+    assert.ok(haya.connectedSources.includes("satnam_global_jobs"));
 
-    const vargo = getAgentById("vargo_spark");
-    assert.equal(vargo.name, "Vargo Spark");
-    assert.ok(vargo.connectedSources.includes("local_agencies_final"));
+    // Legacy aliases resolution: haya_muse_1 / haya_muse_2 -> haya_satnam
+    const haya1Alias = getAgentById("haya_muse_1");
+    assert.equal(haya1Alias.id, "haya_satnam");
+    const haya2Alias = getAgentById("haya_muse_2");
+    assert.equal(haya2Alias.id, "haya_satnam");
 
-    const katoo = getAgentById("katoo_spark");
-    assert.equal(katoo.name, "Katoo Spark");
-    assert.ok(katoo.assignedPipelines.includes("remote_jobs"));
+    const kattu = getAgentById("kattu_ai");
+    assert.equal(kattu.name, "Kattu AI");
+    assert.ok(kattu.assignedPipelines.includes("remote_jobs"));
+    assert.ok(kattu.connectedSources.includes("kattu_india_regional"));
+
+    // Legacy aliases resolution: vargo_spark / katoo_spark -> kattu_ai
+    const vargoAlias = getAgentById("vargo_spark");
+    assert.equal(vargoAlias.id, "kattu_ai");
+    const katooAlias = getAgentById("katoo_spark");
+    assert.equal(katooAlias.id, "kattu_ai");
+
+    const arsh = getAgentById("haya_arsh");
+    assert.equal(arsh.name, "Haya Arsh");
+    assert.equal(arsh.status, "setup_required");
+    assert.equal(arsh.connectedSources.length, 0);
   });
 
   it("28. Multi-agent provenance tracking preserves discovering agents and merges multiple discoveries", () => {
@@ -931,5 +945,136 @@ describe("Sandeep Opportunity OS — Production Engine & Data Verification Suite
     assert.equal(deduplicated.length, 1);
     assert.equal(mergedCount, 1);
     assert.equal(deduplicated[0].provenance_urls.length, 2);
+  });
+
+  it("33. CRITICAL 3-AGENT DEDUPLICATION & USER CRM PRESERVATION: Bago Muse, Haya Satnam, and Kattu AI discover same Opportunity A with zero CRM field loss", () => {
+    // Sandeep has already reviewed and customized Opportunity A in Opportunity OS CRM:
+    const existingOppA = {
+      id: "opp_canonical_alpha_99",
+      category: "remote_jobs",
+      title: "Senior Full Stack React / Node Developer",
+      organization: "Acme Global Technology",
+      source_url: "https://acme.careers/jobs/react-node-developer?utm_source=lead1",
+      canonical_source_url: "https://acme.careers/jobs/react-node-developer",
+      fingerprint: "remote_jobs::acmeglobaltechnology::seniorfullstackreactnodedeveloper",
+      discovered_by_agent: "bago_muse",
+      provenance_urls: ["https://acme.careers/jobs/react-node-developer?utm_source=lead1"],
+      agent_provenance: [
+        {
+          agent_id: "bago_muse",
+          agentId: "bago_muse",
+          agentName: "Bago Muse",
+          source_id: "muse_social_job_hunter",
+          sourceId: "muse_social_job_hunter",
+          source_tab: "ALL LEADS",
+          sourceTab: "ALL LEADS",
+          first_seen_at: "2026-10-15T08:00:00Z"
+        }
+      ],
+      user_status: "Applied",
+      priority: "P1",
+      favorite: true,
+      follow_up_date: "2026-10-25",
+      personal_notes: "Sandeep: Custom portfolio pack sent directly to founder on LinkedIn",
+      contacted_date: "2026-10-15",
+      applied_date: "2026-10-16",
+      workflow: {
+        status: "Applied",
+        priority: "P1",
+        favorite: true,
+        follow_up_date: "2026-10-25",
+        personal_notes: "Sandeep: Custom portfolio pack sent directly to founder on LinkedIn",
+        contacted_date: "2026-10-15",
+        applied_date: "2026-10-16"
+      },
+      score_total: 88,
+      is_active: true
+    };
+
+    // Agent 2: Haya Satnam independently discovers the same job on a global ATS board
+    const satnamDiscovery = {
+      id: "opp_satnam_disc_02",
+      category: "remote_jobs",
+      title: "Senior Full Stack React / Node Developer",
+      organization: "Acme Global Technology",
+      source_url: "https://acme.careers/jobs/react-node-developer?ref=haya_ats",
+      canonical_source_url: "https://acme.careers/jobs/react-node-developer",
+      fingerprint: "remote_jobs::acmeglobaltechnology::seniorfullstackreactnodedeveloper",
+      discovered_by_agent: "haya_satnam",
+      provenance_urls: ["https://acme.careers/jobs/react-node-developer?ref=haya_ats"],
+      agent_provenance: [
+        {
+          agent_id: "haya_satnam",
+          agentId: "haya_satnam",
+          agentName: "Haya Satnam",
+          source_id: "satnam_global_jobs",
+          sourceId: "satnam_global_jobs",
+          source_tab: "Canada",
+          sourceTab: "Canada",
+          first_seen_at: "2026-10-16T14:30:00Z"
+        }
+      ],
+      user_status: "New",
+      priority: "P2",
+      score_total: 91
+    };
+
+    // Agent 3: Kattu AI independently discovers the same job in regional daily research
+    const kattuDiscovery = {
+      id: "opp_kattu_disc_03",
+      category: "remote_jobs",
+      title: "Senior Full Stack React / Node Developer (Remote EMEA)",
+      organization: "Acme Global Technology",
+      source_url: "https://acme.careers/jobs/react-node-developer?board=kattu_regional",
+      canonical_source_url: "https://acme.careers/jobs/react-node-developer",
+      fingerprint: "remote_jobs::acmeglobaltechnology::seniorfullstackreactnodedeveloper",
+      discovered_by_agent: "kattu_ai",
+      provenance_urls: ["https://acme.careers/jobs/react-node-developer?board=kattu_regional"],
+      agent_provenance: [
+        {
+          agent_id: "kattu_ai",
+          agentId: "kattu_ai",
+          agentName: "Kattu AI",
+          source_id: "kattu_eu_regional",
+          sourceId: "kattu_eu_regional",
+          source_tab: "21Oct",
+          sourceTab: "21Oct",
+          first_seen_at: "2026-10-16T18:00:00Z"
+        }
+      ],
+      user_status: "New",
+      priority: "P2",
+      score_total: 94
+    };
+
+    // Run unified deduplication & merging through normalizeAndMergeRecords
+    const { processed } = normalizeAndMergeRecords(
+      [satnamDiscovery, kattuDiscovery],
+      [existingOppA]
+    );
+
+    // CRITICAL ASSERTION 1: Exactly 1 canonical opportunity remains
+    assert.equal(processed.length, 1, "Collision from 3 agents must collapse into exactly 1 canonical opportunity");
+    const canonical = processed[0];
+
+    // CRITICAL ASSERTION 2: Exactly 3 agent attributions preserved
+    assert.equal(canonical.agent_provenance.length, 3, "Merged record must retain all 3 discovering agents");
+    const agentIds = canonical.agent_provenance.map((p) => p.agent_id || p.agentId);
+    assert.ok(agentIds.includes("bago_muse"), "Bago Muse provenance must be retained");
+    assert.ok(agentIds.includes("haya_satnam"), "Haya Satnam provenance must be retained");
+    assert.ok(agentIds.includes("kattu_ai"), "Kattu AI provenance must be retained");
+
+    // CRITICAL ASSERTION 3: Source provenance contains all 3 distinct source URLs
+    assert.ok(canonical.provenance_urls.length >= 3, `Expected >= 3 provenance URLs, got ${canonical.provenance_urls.length}`);
+
+    // CRITICAL ASSERTION 4: ZERO user CRM fields lost (Sandeep's manual work 100% protected)
+    assert.equal(canonical.user_status, "Applied", "CRM status 'Applied' must NEVER revert to 'New'");
+    assert.equal(canonical.workflow?.status, "Applied", "Workflow state status must be 'Applied'");
+    assert.equal(canonical.priority, "P1", "Priority 'P1' must be preserved");
+    assert.equal(canonical.favorite, true, "Favorite flag must remain true");
+    assert.equal(canonical.follow_up_date, "2026-10-25", "Follow up date '2026-10-25' must be preserved");
+    assert.equal(canonical.personal_notes, "Sandeep: Custom portfolio pack sent directly to founder on LinkedIn");
+    assert.equal(canonical.contacted_date, "2026-10-15");
+    assert.equal(canonical.applied_date, "2026-10-16");
   });
 });

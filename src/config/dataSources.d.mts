@@ -10,6 +10,7 @@ export const DATA_SOURCE_REGISTRY: ReadonlyArray<DataSourceResource>;
 export function getDataSources(): ReadonlyArray<DataSourceResource>;
 export function getDataSourceById(id: string): DataSourceResource | undefined;
 export function getDataSourcesByCategory(category: "sheets" | "drive" | "local" | "supabase" | "legacy"): DataSourceResource[];
+export function getDataSourcesByAgent(agentId: string): DataSourceResource[];
 export function getNextScheduledSync(referenceTime?: Date): {
   iso: string;
   formattedUtc: string;

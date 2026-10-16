@@ -137,9 +137,9 @@ export const DataTable: React.FC<DataTableProps> = ({
                       fontSize: "11px",
                       whiteSpace: "nowrap"
                     }}
-                    title={`Discovered by ${prov.map((p) => p.agentName).join(", ")}`}
+                    title={`Discovered by ${prov.map((p) => p.agentName.replace("Sandy Muse", "Bago Muse")).join(", ")}`}
                   >
-                    {agent?.name || "Sandy Muse"}
+                    {agent?.name || "Bago Muse"}
                     {prov.length > 1 && (
                       <span style={{ opacity: 0.85, marginLeft: 4, fontWeight: 700 }}>
                         +{prov.length - 1}
