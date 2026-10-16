@@ -3,6 +3,7 @@ import verifiedSeed from "../../../data/verified_seed_24.json";
 import { applyWorkflowTransition, syncDatabaseToSheetRows } from "../../../engine/core";
 import { executeSyncPipeline, loadLatestSyncTelemetry, type SyncTelemetry, type SourceSyncDiagnostic } from "../../../pipeline/syncService";
 import { getNextScheduledSync } from "../../../config/dataSources";
+import { saveCachedOpportunities, getCachedOpportunities } from "../../../lib/cache/opportunityCache";
 import type {
   OpportunityRecord,
   CandidateProfile,
@@ -68,6 +69,172 @@ function savePersistedCrmMap(map: Record<string, Partial<OpportunityRecord>>): v
   }
 }
 
+async function fetchAllOpportunitiesFromSupabase(
+  client: NonNullable<typeof supabaseClient>
+): Promise<Record<string, unknown>[]> {
+  const pageSize = 1000;
+  const allRows: Record<string, unknown>[] = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const { data, error } = await client
+      .from("opportunities")
+      .select("*, workflow_states(*)")
+      .order("score_total", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      if (allRows.length > 0) return allRows;
+      throw error;
+    }
+
+    if (data && data.length > 0) {
+      allRows.push(...data);
+      if (data.length < pageSize) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    } else {
+      hasMore = false;
+    }
+  }
+
+  return allRows;
+}
+
+function mapSupabaseRowsToOpportunities(
+  data: Record<string, unknown>[],
+  persistedMap: Record<string, Partial<OpportunityRecord>>
+): OpportunityRecord[] {
+  return data.map((d: Record<string, unknown>) => {
+    const id = d.id as string;
+    const localSaved = persistedMap[id];
+    const rawWf = d.workflow_states;
+    const wf =
+      Array.isArray(rawWf) && rawWf[0]
+        ? (rawWf[0] as Record<string, unknown>)
+        : ((rawWf as Record<string, unknown>) || {});
+
+    const userStatus =
+      localSaved?.user_status ||
+      localSaved?.workflow?.status ||
+      (wf.status as WorkflowStatus) ||
+      (d.status as WorkflowStatus) ||
+      (d.user_status as WorkflowStatus) ||
+      "New";
+    const userPriority =
+      localSaved?.priority ||
+      localSaved?.workflow?.priority ||
+      (wf.priority as PriorityLevel) ||
+      (d.priority as PriorityLevel) ||
+      "P2";
+    const userFav =
+      typeof localSaved?.favorite === "boolean"
+        ? localSaved.favorite
+        : typeof localSaved?.workflow?.favorite === "boolean"
+          ? localSaved.workflow.favorite
+          : typeof wf.favorite === "boolean"
+            ? (wf.favorite as boolean)
+            : ((d.favorite as boolean) ?? false);
+    const userFollowUp =
+      localSaved?.follow_up_date !== undefined
+        ? localSaved.follow_up_date
+        : localSaved?.workflow?.follow_up_date !== undefined
+          ? localSaved.workflow.follow_up_date
+          : wf.follow_up_date !== undefined
+            ? (wf.follow_up_date as string | null)
+            : ((d.follow_up_date as string | null) ?? null);
+    const userNotes =
+      localSaved?.personal_notes ??
+      localSaved?.workflow?.personal_notes ??
+      (wf.personal_notes !== undefined ? (wf.personal_notes as string) : ((d.personal_notes as string) ?? ""));
+    const userContacted =
+      localSaved?.contacted_date !== undefined
+        ? localSaved.contacted_date
+        : localSaved?.workflow?.contacted_date !== undefined
+          ? localSaved.workflow.contacted_date
+          : wf.contacted_date !== undefined
+            ? (wf.contacted_date as string | null)
+            : ((d.contacted_date as string | null) ?? null);
+    const userApplied =
+      localSaved?.applied_date !== undefined
+        ? localSaved.applied_date
+        : localSaved?.workflow?.applied_date !== undefined
+          ? localSaved.workflow.applied_date
+          : wf.applied_date !== undefined
+            ? (wf.applied_date as string | null)
+            : ((d.applied_date as string | null) ?? null);
+
+    return {
+      ...(d as unknown as OpportunityRecord),
+      workflow: {
+        status: userStatus,
+        priority: userPriority,
+        favorite: userFav,
+        follow_up_date: userFollowUp,
+        personal_notes: userNotes,
+        contacted_date: userContacted,
+        applied_date: userApplied
+      },
+      user_status: userStatus,
+      status: userStatus,
+      priority: userPriority,
+      favorite: userFav,
+      follow_up_date: userFollowUp,
+      personal_notes: userNotes,
+      contacted_date: userContacted,
+      applied_date: userApplied,
+      activity_history:
+        localSaved?.activity_history ||
+        (Array.isArray(d.activity_history)
+          ? (d.activity_history as unknown as ActivityEvent[])
+          : [
+              {
+                at: (d.last_verified_at as string) || new Date().toISOString(),
+                label: "Verified record from Supabase database"
+              }
+            ])
+    };
+  });
+}
+
+export async function getFastCachedState(): Promise<RepositoryState | null> {
+  const cached = await getCachedOpportunities();
+  if (!cached || cached.length === 0) return null;
+
+  const persistedMap = loadPersistedCrmMap();
+  const seedProfile = verifiedSeed.candidate_profile as unknown as CandidateProfile;
+  const profile = loadPersistedProfile(seedProfile);
+
+  const merged = cached.map((opp) => {
+    const saved = persistedMap[opp.id];
+    if (!saved) return opp;
+    return {
+      ...opp,
+      ...saved,
+      workflow: {
+        ...opp.workflow,
+        ...(saved.workflow || {})
+      },
+      activity_history: saved.activity_history || opp.activity_history
+    };
+  });
+
+  return {
+    mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
+    opportunities: merged,
+    profile,
+    nativeSheetId: NATIVE_SHEET_ID,
+    uploadedXlsxId: UPLOADED_XLSX_ID,
+    lastSyncedAt: getLatestVerificationTimestamp(merged),
+    syncTelemetry: loadLatestSyncTelemetry()
+  };
+}
+
 export async function fetchOpportunityState(): Promise<RepositoryState> {
   const seedOpportunities = (verifiedSeed.opportunities as unknown as OpportunityRecord[]).map(
     (item) => ({ ...item })
@@ -76,147 +243,96 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
   const profile = loadPersistedProfile(seedProfile);
 
   if (isSupabaseConfigured && supabaseClient) {
-    const { data, error } = await supabaseClient
-      .from("opportunities")
-      .select("*, workflow_states(*)")
-      .order("score_total", { ascending: false });
+    try {
+      const data = await fetchAllOpportunitiesFromSupabase(supabaseClient);
 
-    if (!error && Array.isArray(data) && data.length > 0) {
-      // Hydrate multi-device operations telemetry from canonical research_runs table
-      let dbTelemetry: SyncTelemetry | null = null;
-      try {
-        const { data: runs } = await supabaseClient
-          .from("research_runs")
-          .select("*")
-          .order("run_timestamp", { ascending: false })
-          .limit(1);
+      if (Array.isArray(data) && data.length > 0) {
+        // Hydrate multi-device operations telemetry from canonical research_runs table
+        let dbTelemetry: SyncTelemetry | null = null;
+        try {
+          const { data: runs } = await supabaseClient
+            .from("research_runs")
+            .select("*")
+            .order("run_timestamp", { ascending: false })
+            .limit(1);
 
-        if (runs && runs.length > 0) {
-          const r = runs[0];
-          const nextSync = getNextScheduledSync(new Date(r.run_timestamp));
-          dbTelemetry = {
-            runId: r.run_id,
-            startedAt: r.run_timestamp,
-            completedAt: r.run_timestamp,
-            durationMs: Math.round(Number(r.duration_sec || 0) * 1000),
-            status: (r.sheets_sync_status as "SUCCESS" | "PARTIAL" | "FAILED") || "SUCCESS",
-            sourcesAttempted: r.sources_checked || 3,
-            sourcesSucceeded: r.sheets_sync_status === "SUCCESS" ? r.sources_checked : 0,
-            sourcesFailed: r.sheets_sync_status === "SUCCESS" ? 0 : 1,
-            recordsAdded: r.discovered_count || 0,
-            recordsUpdated: r.accepted_count || 0,
-            recordsUnchanged: 0,
-            recordsGated: r.filtered_count || 0,
-            userFieldsPreserved: r.accepted_count || 0,
-            totalRecords: r.accepted_count || data.length,
-            sourceDiagnostics: Array.isArray((r as Record<string, unknown>).source_diagnostics)
-              ? ((r as Record<string, unknown>).source_diagnostics as SourceSyncDiagnostic[])
-              : [],
-            nextScheduledSyncIso: nextSync.iso,
-            nextScheduledSyncUtc: nextSync.formattedUtc
-          };
+          if (runs && runs.length > 0) {
+            const r = runs[0];
+            const nextSync = getNextScheduledSync(new Date(r.run_timestamp));
+            dbTelemetry = {
+              runId: r.run_id,
+              startedAt: r.run_timestamp,
+              completedAt: r.run_timestamp,
+              durationMs: Math.round(Number(r.duration_sec || 0) * 1000),
+              status: (r.sheets_sync_status as "SUCCESS" | "PARTIAL" | "FAILED") || "SUCCESS",
+              sourcesAttempted: r.sources_checked || 3,
+              sourcesSucceeded: r.sheets_sync_status === "SUCCESS" ? r.sources_checked : 0,
+              sourcesFailed: r.sheets_sync_status === "SUCCESS" ? 0 : 1,
+              recordsAdded: r.discovered_count || 0,
+              recordsUpdated: r.accepted_count || 0,
+              recordsUnchanged: 0,
+              recordsGated: r.filtered_count || 0,
+              userFieldsPreserved: r.accepted_count || 0,
+              totalRecords: r.accepted_count || data.length,
+              sourceDiagnostics: Array.isArray((r as Record<string, unknown>).source_diagnostics)
+                ? ((r as Record<string, unknown>).source_diagnostics as SourceSyncDiagnostic[])
+                : [],
+              nextScheduledSyncIso: nextSync.iso,
+              nextScheduledSyncUtc: nextSync.formattedUtc
+            };
+          }
+        } catch {
+          // Fall back to local storage telemetry if research_runs query fails
         }
-      } catch {
-        // Fall back to local storage telemetry if research_runs query fails
-      }
 
-      const persistedMap = loadPersistedCrmMap();
-      const mappedOpportunities: OpportunityRecord[] = data.map((d: Record<string, unknown>) => {
-        const id = d.id as string;
-        const localSaved = persistedMap[id];
-        const rawWf = d.workflow_states;
-        const wf = Array.isArray(rawWf) && rawWf[0] ? (rawWf[0] as Record<string, unknown>) : ((rawWf as Record<string, unknown>) || {});
+        const persistedMap = loadPersistedCrmMap();
+        const mappedOpportunities = mapSupabaseRowsToOpportunities(data, persistedMap);
 
-        const userStatus =
-          localSaved?.user_status ||
-          localSaved?.workflow?.status ||
-          (wf.status as WorkflowStatus) ||
-          (d.status as WorkflowStatus) ||
-          (d.user_status as WorkflowStatus) ||
-          "New";
-        const userPriority =
-          localSaved?.priority ||
-          localSaved?.workflow?.priority ||
-          (wf.priority as PriorityLevel) ||
-          (d.priority as PriorityLevel) ||
-          "P2";
-        const userFav =
-          typeof localSaved?.favorite === "boolean"
-            ? localSaved.favorite
-            : typeof localSaved?.workflow?.favorite === "boolean"
-              ? localSaved.workflow.favorite
-              : typeof wf.favorite === "boolean"
-                ? (wf.favorite as boolean)
-                : ((d.favorite as boolean) ?? false);
-        const userFollowUp =
-          localSaved?.follow_up_date !== undefined
-            ? localSaved.follow_up_date
-            : localSaved?.workflow?.follow_up_date !== undefined
-              ? localSaved.workflow.follow_up_date
-              : wf.follow_up_date !== undefined
-                ? (wf.follow_up_date as string | null)
-                : ((d.follow_up_date as string | null) ?? null);
-        const userNotes =
-          localSaved?.personal_notes ??
-          localSaved?.workflow?.personal_notes ??
-          (wf.personal_notes !== undefined ? (wf.personal_notes as string) : ((d.personal_notes as string) ?? ""));
-        const userContacted =
-          localSaved?.contacted_date !== undefined
-            ? localSaved.contacted_date
-            : localSaved?.workflow?.contacted_date !== undefined
-              ? localSaved.workflow.contacted_date
-              : wf.contacted_date !== undefined
-                ? (wf.contacted_date as string | null)
-                : ((d.contacted_date as string | null) ?? null);
-        const userApplied =
-          localSaved?.applied_date !== undefined
-            ? localSaved.applied_date
-            : localSaved?.workflow?.applied_date !== undefined
-              ? localSaved.workflow.applied_date
-              : wf.applied_date !== undefined
-                ? (wf.applied_date as string | null)
-                : ((d.applied_date as string | null) ?? null);
+        // Cache opportunities persistently for zero-latency retrieval and offline durability
+        void saveCachedOpportunities(mappedOpportunities);
 
         return {
-          ...(d as unknown as OpportunityRecord),
-          workflow: {
-            status: userStatus,
-            priority: userPriority,
-            favorite: userFav,
-            follow_up_date: userFollowUp,
-            personal_notes: userNotes,
-            contacted_date: userContacted,
-            applied_date: userApplied
-          },
-          user_status: userStatus,
-          status: userStatus,
-          priority: userPriority,
-          favorite: userFav,
-          follow_up_date: userFollowUp,
-          personal_notes: userNotes,
-          contacted_date: userContacted,
-          applied_date: userApplied,
-          activity_history: localSaved?.activity_history || (Array.isArray(d.activity_history)
-            ? (d.activity_history as unknown as ActivityEvent[])
-            : [
-                {
-                  at: (d.last_verified_at as string) || new Date().toISOString(),
-                  label: "Verified record from Supabase database"
-                }
-              ])
+          mode: "SUPABASE_LIVE",
+          opportunities: mappedOpportunities,
+          profile,
+          nativeSheetId: NATIVE_SHEET_ID,
+          uploadedXlsxId: UPLOADED_XLSX_ID,
+          lastSyncedAt: getLatestVerificationTimestamp(mappedOpportunities),
+          syncTelemetry: dbTelemetry || loadLatestSyncTelemetry()
         };
-      });
-
-      return {
-        mode: "SUPABASE_LIVE",
-        opportunities: mappedOpportunities,
-        profile,
-        nativeSheetId: NATIVE_SHEET_ID,
-        uploadedXlsxId: UPLOADED_XLSX_ID,
-        lastSyncedAt: getLatestVerificationTimestamp(mappedOpportunities),
-        syncTelemetry: dbTelemetry || loadLatestSyncTelemetry()
-      };
+      }
+    } catch (err) {
+      console.warn("Supabase fetch failed or network offline, falling back to cache", err);
     }
+  }
+
+  // Check persistent cache before falling back to seed items
+  const cached = await getCachedOpportunities();
+  if (cached && cached.length > 0) {
+    const persistedMap = loadPersistedCrmMap();
+    const merged = cached.map((opp) => {
+      const saved = persistedMap[opp.id];
+      if (!saved) return opp;
+      return {
+        ...opp,
+        ...saved,
+        workflow: {
+          ...opp.workflow,
+          ...(saved.workflow || {})
+        },
+        activity_history: saved.activity_history || opp.activity_history
+      };
+    });
+
+    return {
+      mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
+      opportunities: merged,
+      profile,
+      nativeSheetId: NATIVE_SHEET_ID,
+      uploadedXlsxId: UPLOADED_XLSX_ID,
+      lastSyncedAt: getLatestVerificationTimestamp(merged),
+      syncTelemetry: loadLatestSyncTelemetry()
+    };
   }
 
   // Clearly marked SEED_IMPORT_ADAPTER using the 24 real verified opportunities + persisted CRM state
@@ -271,17 +387,17 @@ export async function performOpportunitySync(
   let activeRecords = records;
   if (isSupabaseConfigured && supabaseClient) {
     try {
-      const { data, error } = await supabaseClient
-        .from("opportunities")
-        .select("*, workflow_states(*)")
-        .order("score_total", { ascending: false });
-      if (!error && Array.isArray(data) && data.length > 0) {
-        activeRecords = data as unknown as OpportunityRecord[];
+      const freshRows = await fetchAllOpportunitiesFromSupabase(supabaseClient);
+      if (freshRows.length > 0) {
+        activeRecords = mapSupabaseRowsToOpportunities(freshRows, map);
       }
     } catch {
       // Continue with returned records
     }
   }
+
+  // Persist to offline cache
+  void saveCachedOpportunities(activeRecords);
 
   const state: RepositoryState = {
     mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",

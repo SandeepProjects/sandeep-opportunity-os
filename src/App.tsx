@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { AppRouterProvider, useAppRouter } from "./app/router/router";
 import {
   fetchOpportunityState,
+  getFastCachedState,
   performOpportunitySync,
   persistWorkflowMutation,
   persistCandidateProfile,
@@ -25,9 +26,25 @@ const MainContent: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
   useEffect(() => {
-    void fetchOpportunityState().then((state) => {
-      setRepoState(state);
+    let active = true;
+
+    // 1. Immediately hydrate from persistent cache if available for instant zero-latency render
+    void getFastCachedState().then((cachedState) => {
+      if (active && cachedState) {
+        setRepoState((prev) => prev || cachedState);
+      }
     });
+
+    // 2. Fetch fresh live state from Supabase / server
+    void fetchOpportunityState().then((state) => {
+      if (active) {
+        setRepoState(state);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const toggleTheme = useCallback(() => {
