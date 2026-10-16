@@ -8,6 +8,7 @@ import { MetricStrip } from "../../components/ui/Metric";
 import { FilterBar, type SavedViewOption } from "../../components/ui/FilterBar";
 import { DataTable } from "../../components/ui/DataTable";
 import { SectionPanel } from "../../components/ui/SectionPanel";
+import { parseDeadlineTimestamp } from "../../lib/formatters";
 
 interface WorkspacePageProps {
   category: PipelineCategory | "all";
@@ -119,7 +120,11 @@ export const WorkspacePage: React.FC<WorkspacePageProps> = ({
           return pa - pb || b.score_total - a.score_total;
         }
         if (sortBy === "deadline") {
-          return String(a.deadline || "9999").localeCompare(String(b.deadline || "9999"));
+          const da = a.deadline || (a.details as Record<string, unknown> | undefined)?.deadline as string || "";
+          const db = b.deadline || (b.details as Record<string, unknown> | undefined)?.deadline as string || "";
+          const ta = parseDeadlineTimestamp(da);
+          const tb = parseDeadlineTimestamp(db);
+          return ta - tb || b.score_total - a.score_total;
         }
         return a.organization.localeCompare(b.organization);
       });

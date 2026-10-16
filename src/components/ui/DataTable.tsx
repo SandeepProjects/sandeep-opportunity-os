@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { OpportunityRecord } from "../../types/opportunity";
 import { Score } from "./Score";
 import { StatusBadge } from "./StatusBadge";
@@ -7,7 +7,7 @@ import { PriorityBadge } from "./PriorityBadge";
 import { EmptyState } from "./EmptyState";
 import { resolveOpportunityProvenance } from "../../engine/provenance";
 import { getAgentById } from "../../config/agentRegistry";
-import { formatCategoryName } from "../../lib/formatters";
+import { formatCategoryName, decodeHtmlEntities } from "../../lib/formatters";
 
 interface DataTableProps {
   records: OpportunityRecord[];
@@ -28,6 +28,19 @@ export const DataTable: React.FC<DataTableProps> = ({
   onResetFilters,
   showCategory
 }) => {
+  const [pageSize, setPageSize] = useState<number | "ALL">(50);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [records]);
+
+  const totalPages = pageSize === "ALL" ? 1 : Math.max(1, Math.ceil(records.length / pageSize));
+  const paginatedRecords = useMemo(() => {
+    if (pageSize === "ALL") return records;
+    const start = (currentPage - 1) * pageSize;
+    return records.slice(start, start + pageSize);
+  }, [records, currentPage, pageSize]);
   if (records.length === 0) {
     return (
       <EmptyState
@@ -66,7 +79,7 @@ export const DataTable: React.FC<DataTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {records.map((opp) => {
+          {paginatedRecords.map((opp) => {
             const st = opp.workflow?.status || opp.user_status || "New";
             const pr = opp.workflow?.priority || opp.priority || "P1";
             const fu = opp.workflow?.follow_up_date || opp.follow_up_date;
@@ -79,7 +92,7 @@ export const DataTable: React.FC<DataTableProps> = ({
                 key={opp.id}
                 tabIndex={0}
                 role="button"
-                aria-label={`Inspect ${opp.title} at ${opp.organization}, score ${opp.score_total}`}
+                aria-label={`Inspect ${decodeHtmlEntities(opp.title)} at ${decodeHtmlEntities(opp.organization)}, score ${opp.score_total}`}
                 className={`${selectedId === opp.id ? "selected" : ""} ${
                   opp.is_active === false ? "row-gated" : ""
                 }`}
@@ -101,10 +114,10 @@ export const DataTable: React.FC<DataTableProps> = ({
                         ★
                       </span>
                     )}
-                    <span>{opp.title}</span>
+                    <span>{decodeHtmlEntities(opp.title)}</span>
                   </div>
                   <div className="os-cell-secondary">
-                    <strong style={{ color: "var(--text-primary)" }}>{opp.organization}</strong> · {opp.location}
+                    <strong style={{ color: "var(--text-primary)" }}>{decodeHtmlEntities(opp.organization)}</strong> · {decodeHtmlEntities(opp.location)}
                   </div>
                 </td>
                 {hasMultipleCategories && (
@@ -188,7 +201,7 @@ export const DataTable: React.FC<DataTableProps> = ({
 
       {/* Intelligent Mobile Structured Cards (<=768px, 430px, 390px) */}
       <div className="os-mobile-card-list">
-        {records.map((opp) => {
+        {paginatedRecords.map((opp) => {
           const st = opp.workflow?.status || opp.user_status || "New";
           const pr = opp.workflow?.priority || opp.priority || "P1";
           return (
@@ -197,7 +210,7 @@ export const DataTable: React.FC<DataTableProps> = ({
               className="os-mobile-card"
               role="button"
               tabIndex={0}
-              aria-label={`Inspect ${opp.title}`}
+              aria-label={`Inspect ${decodeHtmlEntities(opp.title)}`}
               onClick={() => onSelect(opp)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -213,9 +226,9 @@ export const DataTable: React.FC<DataTableProps> = ({
                 <Score score={opp.score_total} size="sm" />
               </div>
               <div>
-                <div className="os-cell-primary">{opp.title}</div>
+                <div className="os-cell-primary">{decodeHtmlEntities(opp.title)}</div>
                 <div className="os-cell-secondary">
-                  <strong>{opp.organization}</strong> · {opp.location}
+                  <strong>{decodeHtmlEntities(opp.organization)}</strong> · {decodeHtmlEntities(opp.location)}
                 </div>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center", marginTop: "4px" }}>
@@ -230,6 +243,59 @@ export const DataTable: React.FC<DataTableProps> = ({
           );
         })}
       </div>
+
+      {records.length > 25 && (
+        <div className="os-pagination-bar" role="navigation" aria-label="Table pagination">
+          <div className="os-pagination-info mono">
+            Showing {records.length === 0 ? 0 : (currentPage - 1) * (pageSize === "ALL" ? records.length : pageSize) + 1}–
+            {Math.min(currentPage * (pageSize === "ALL" ? records.length : pageSize), records.length)} of {records.length} records
+          </div>
+          <div className="os-pagination-controls">
+            <label className="os-pagination-size-label">
+              Rows:
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  const val = e.target.value === "ALL" ? "ALL" : Number(e.target.value);
+                  setPageSize(val);
+                  setCurrentPage(1);
+                }}
+                className="os-table-select os-pagination-select"
+                aria-label="Rows per page"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={250}>250</option>
+                <option value="ALL">All ({records.length})</option>
+              </select>
+            </label>
+            <div className="os-pagination-buttons">
+              <button
+                type="button"
+                className="btn-ghost os-page-btn"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                aria-label="Previous page"
+              >
+                ‹ Prev
+              </button>
+              <span className="os-page-current mono">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+              <button
+                type="button"
+                className="btn-ghost os-page-btn"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                aria-label="Next page"
+              >
+                Next ›
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

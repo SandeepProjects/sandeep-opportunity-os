@@ -1,5 +1,6 @@
 import React from "react";
 import type { OpportunityRecord } from "../types/opportunity";
+import { decodeHtmlEntities } from "../lib/formatters";
 
 export interface TodayActionQueueProps {
   opportunities: OpportunityRecord[];
@@ -24,10 +25,10 @@ export const TodayActionQueue: React.FC<TodayActionQueueProps> = ({
         >
           <header>
             <span className="mono">{opp.id}</span>
-            <h3>{opp.title}</h3>
+            <h3>{decodeHtmlEntities(opp.title)}</h3>
             <span className="score-badge mono">{opp.score_total}</span>
           </header>
-          <p>{opp.organization} · {opp.location}</p>
+          <p>{decodeHtmlEntities(opp.organization)} · {decodeHtmlEntities(opp.location)}</p>
         </article>
       ))}
     </section>

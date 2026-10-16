@@ -12,7 +12,7 @@ import { EligibilityBadge } from "./EligibilityBadge";
 import { PriorityBadge } from "./PriorityBadge";
 import { resolveOpportunityProvenance } from "../../engine/provenance";
 import { getAgentById } from "../../config/agentRegistry";
-import { formatCategoryName } from "../../lib/formatters";
+import { formatCategoryName, decodeHtmlEntities } from "../../lib/formatters";
 
 interface OpportunityDrawerProps {
   opportunity: OpportunityRecord | null;
@@ -146,9 +146,9 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
               <PriorityBadge priority={wf.priority} />
               <StatusBadge status={wf.status} />
             </div>
-            <h2 id="opportunity-drawer-title" className="os-drawer-title">{opportunity.title}</h2>
+            <h2 id="opportunity-drawer-title" className="os-drawer-title">{decodeHtmlEntities(opportunity.title)}</h2>
             <p className="os-drawer-subtitle">
-              {opportunity.organization} · {opportunity.location}
+              {decodeHtmlEntities(opportunity.organization)} · {decodeHtmlEntities(opportunity.location)}
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -175,17 +175,19 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
               </a>
             </h3>
             <p style={{ margin: "0 0 8px", fontSize: "13px" }}>
-              {opportunity.details?.suggested_service_angle ||
+              {decodeHtmlEntities(
+                opportunity.details?.suggested_service_angle ||
                 opportunity.details?.recommended_solution ||
                 opportunity.details?.tuition_and_coverage ||
                 opportunity.details?.salary_range ||
                 opportunity.details?.compensation ||
-                "Verified directly from official primary source."}
+                "Verified directly from official primary source."
+              )}
             </p>
             {opportunity.details?.outreach_hook && (
               <div className="os-why-box" style={{ marginTop: "8px" }}>
                 <strong>Tailored Outreach Hook / Pitch Angle</strong>
-                <span>{opportunity.details.outreach_hook}</span>
+                <span>{decodeHtmlEntities(String(opportunity.details.outreach_hook))}</span>
               </div>
             )}
           </section>

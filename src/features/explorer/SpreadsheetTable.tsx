@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import type { OpportunityRecord } from "../../types/opportunity";
 import { Score } from "../../components/ui/Score";
 import { StatusBadge } from "../../components/ui/StatusBadge";
@@ -6,7 +6,12 @@ import { PriorityBadge } from "../../components/ui/PriorityBadge";
 import { EligibilityBadge } from "../../components/ui/EligibilityBadge";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { resolveOpportunityProvenance } from "../../engine/provenance";
-import { formatCategoryName } from "../../lib/formatters";
+import {
+  formatCategoryName,
+  decodeHtmlEntities,
+  parseDeadlineTimestamp,
+  normalizePriority
+} from "../../lib/formatters";
 
 interface SpreadsheetTableProps {
   records: OpportunityRecord[];
@@ -43,6 +48,13 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
   const [sortField, setSortField] = useState<SortField>("score");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const [pageSize, setPageSize] = useState<number | "ALL">(50);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Reset pagination on filter or sheet tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [inSheetSearch, statusFilter, priorityFilter, sheetTitle, tabLabel]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -82,8 +94,8 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
           if (st !== statusFilter) return false;
         }
         if (priorityFilter !== "ALL") {
-          const pr = opp.workflow?.priority || opp.priority || "P1";
-          if (pr !== priorityFilter) return false;
+          const pr = normalizePriority(opp.workflow?.priority || opp.priority);
+          if (pr !== normalizePriority(priorityFilter)) return false;
         }
         if (inSheetSearch.trim()) {
           const q = inSheetSearch.toLowerCase();
@@ -113,9 +125,14 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
           const sb = b.workflow?.status || b.user_status || "New";
           diff = sa.localeCompare(sb);
         } else if (sortField === "deadline") {
-          const da = a.deadline || "9999";
-          const db = b.deadline || "9999";
-          diff = da.localeCompare(db);
+          const da = a.deadline || (a.details as Record<string, unknown> | undefined)?.deadline as string || "";
+          const db = b.deadline || (b.details as Record<string, unknown> | undefined)?.deadline as string || "";
+          const ta = parseDeadlineTimestamp(da);
+          const tb = parseDeadlineTimestamp(db);
+          diff = ta - tb;
+          if (diff === 0) {
+            diff = b.score_total - a.score_total;
+          }
         } else if (sortField === "agent") {
           const pa = resolveOpportunityProvenance(a)[0]?.agentName || "";
           const pb = resolveOpportunityProvenance(b)[0]?.agentName || "";
@@ -125,6 +142,13 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
         return sortDir === "desc" ? -diff : diff;
       });
   }, [records, statusFilter, priorityFilter, inSheetSearch, sortField, sortDir]);
+
+  const totalPages = pageSize === "ALL" ? 1 : Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+  const paginatedRecords = useMemo(() => {
+    if (pageSize === "ALL") return filteredRecords;
+    const start = (currentPage - 1) * pageSize;
+    return filteredRecords.slice(start, start + pageSize);
+  }, [filteredRecords, currentPage, pageSize]);
 
   const allSelected =
     filteredRecords.length > 0 &&
@@ -185,10 +209,10 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
             aria-label="Filter by Priority"
           >
             <option value="ALL">All Priorities</option>
-            <option value="Critical">Critical</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
+            <option value="P0">P0 · Critical</option>
+            <option value="P1">P1 · High</option>
+            <option value="P2">P2 · Medium</option>
+            <option value="P3">P3 · Low</option>
           </select>
 
           {selectedRowIds.size > 0 && (
@@ -254,7 +278,7 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredRecords.map((opp) => {
+              {paginatedRecords.map((opp) => {
                 const isRowSelected = selectedRowIds.has(opp.id);
                 const isCurrentActive = selectedId === opp.id;
                 const status = opp.workflow?.status || opp.user_status || "New";
@@ -262,6 +286,7 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                 const followUp = opp.workflow?.follow_up_date || opp.follow_up_date;
                 const provs = resolveOpportunityProvenance(opp);
                 const firstProv = provs[0];
+                const deadlineText = opp.deadline || (opp.details as Record<string, unknown> | undefined)?.deadline as string || "";
 
                 return (
                   <tr
@@ -272,7 +297,7 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                     onClick={() => onSelect(opp)}
                     tabIndex={0}
                     role="button"
-                    aria-label={`Inspect ${opp.title} at ${opp.organization}`}
+                    aria-label={`Inspect ${decodeHtmlEntities(opp.title)} at ${decodeHtmlEntities(opp.organization)}`}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
@@ -298,14 +323,14 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                             ★
                           </span>
                         )}
-                        <span style={{ fontWeight: 600 }}>{opp.title}</span>
+                        <span style={{ fontWeight: 600 }}>{decodeHtmlEntities(opp.title)}</span>
                       </div>
                       <div className="os-cell-secondary" style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
-                        {opp.location} · ID: <span className="mono">{opp.id}</span>
+                        {decodeHtmlEntities(opp.location)} · ID: <span className="mono">{opp.id}</span>
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: 500, color: "var(--text-primary)" }}>{opp.organization}</span>
+                      <span style={{ fontWeight: 500, color: "var(--text-primary)" }}>{decodeHtmlEntities(opp.organization)}</span>
                     </td>
                     <td>
                       <span className="os-badge neutral" style={{ fontSize: "11px", whiteSpace: "nowrap" }}>
@@ -346,9 +371,9 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                         <span className="mono" style={{ fontSize: "11px", color: "var(--status-info-fg)" }}>
                           📅 {followUp}
                         </span>
-                      ) : opp.deadline ? (
+                      ) : deadlineText ? (
                         <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                          ⏰ {opp.deadline}
+                          ⏰ {decodeHtmlEntities(deadlineText)}
                         </span>
                       ) : (
                         <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>—</span>
@@ -377,7 +402,7 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
 
           {/* Mobile Card Fallback (matches Playwright selector .responsive-switch .os-mobile-card) */}
           <div className="os-mobile-card-list">
-            {filteredRecords.map((opp) => {
+            {paginatedRecords.map((opp) => {
               const status = opp.workflow?.status || opp.user_status || "New";
               const priority = opp.workflow?.priority || opp.priority || "P1";
 
@@ -391,8 +416,8 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                 >
                   <div className="os-mobile-card-header">
                     <div>
-                      <div className="os-mobile-card-title">{opp.title}</div>
-                      <div className="os-mobile-card-org">{opp.organization}</div>
+                      <div className="os-mobile-card-title">{decodeHtmlEntities(opp.title)}</div>
+                      <div className="os-mobile-card-org">{decodeHtmlEntities(opp.organization)}</div>
                     </div>
                     <Score score={opp.score_total} size="sm" />
                   </div>
@@ -407,6 +432,60 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
               );
             })}
           </div>
+
+          {/* Table Pagination Controls */}
+          {filteredRecords.length > 0 && (
+            <div className="os-pagination-bar" role="navigation" aria-label="Table pagination">
+              <div className="os-pagination-info mono">
+                Showing {filteredRecords.length === 0 ? 0 : (currentPage - 1) * (pageSize === "ALL" ? filteredRecords.length : pageSize) + 1}–
+                {Math.min(currentPage * (pageSize === "ALL" ? filteredRecords.length : pageSize), filteredRecords.length)} of {filteredRecords.length} records
+              </div>
+              <div className="os-pagination-controls">
+                <label className="os-pagination-size-label">
+                  Rows:
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const val = e.target.value === "ALL" ? "ALL" : Number(e.target.value);
+                      setPageSize(val);
+                      setCurrentPage(1);
+                    }}
+                    className="os-table-select os-pagination-select"
+                    aria-label="Rows per page"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={250}>250</option>
+                    <option value="ALL">All ({filteredRecords.length})</option>
+                  </select>
+                </label>
+                <div className="os-pagination-buttons">
+                  <button
+                    type="button"
+                    className="btn-ghost os-page-btn"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    aria-label="Previous page"
+                  >
+                    ‹ Prev
+                  </button>
+                  <span className="os-page-current mono">
+                    Page {currentPage} of {totalPages || 1}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn-ghost os-page-btn"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    aria-label="Next page"
+                  >
+                    Next ›
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

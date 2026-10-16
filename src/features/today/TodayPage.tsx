@@ -14,7 +14,7 @@ import { getNextScheduledSync } from "../../config/dataSources";
 import { formatRelativeTime } from "../../pipeline/syncService";
 import { resolveOpportunityProvenance } from "../../engine/provenance";
 import { getAgentById } from "../../config/agentRegistry";
-import { formatCategoryName } from "../../lib/formatters";
+import { formatCategoryName, decodeHtmlEntities } from "../../lib/formatters";
 
 interface TodayPageProps {
   opportunities: OpportunityRecord[];
@@ -230,15 +230,15 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                 </div>
 
                 <div>
-                  <h4 className="os-spotlight-title">{item.title}</h4>
+                  <h4 className="os-spotlight-title">{decodeHtmlEntities(item.title)}</h4>
                   <p className="os-spotlight-meta">
-                    <strong>{item.organization}</strong> · {item.location}
+                    <strong>{decodeHtmlEntities(item.organization)}</strong> · {decodeHtmlEntities(item.location)}
                   </p>
                 </div>
 
                 <div className="os-spotlight-reason">
                   <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>Context:</span>{" "}
-                  {item.action_reason || `${item.score_total} fit · Top recommendation`}
+                  {decodeHtmlEntities(item.action_reason) || `${item.score_total} fit · Top recommendation`}
                 </div>
 
                 <div className="os-spotlight-footer">
@@ -403,9 +403,9 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                       </div>
                     </td>
                     <td>
-                      <div className="os-cell-primary">{item.title}</div>
+                      <div className="os-cell-primary">{decodeHtmlEntities(item.title)}</div>
                       <div className="os-cell-secondary">
-                        <strong style={{ color: "var(--text-primary)" }}>{item.organization}</strong> · {item.location}
+                        <strong style={{ color: "var(--text-primary)" }}>{decodeHtmlEntities(item.organization)}</strong> · {decodeHtmlEntities(item.location)}
                       </div>
                     </td>
                     <td>
@@ -482,9 +482,9 @@ export const TodayPage: React.FC<TodayPageProps> = ({
                   </div>
                   <Score score={item.score_total} size="sm" />
                 </div>
-                <div className="os-cell-primary">{item.title}</div>
+                <div className="os-cell-primary">{decodeHtmlEntities(item.title)}</div>
                 <div className="os-cell-secondary">
-                  <strong>{item.organization}</strong> · {item.location}
+                  <strong>{decodeHtmlEntities(item.organization)}</strong> · {decodeHtmlEntities(item.location)}
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
                   <span className="os-badge neutral" style={{ fontSize: "10.5px" }}>

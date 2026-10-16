@@ -680,28 +680,157 @@ export function filterOpportunitiesForSheetTab(
   tabId?: string
 ): OpportunityRecord[] {
   // 1. Filter by category if sheet has a specific pipeline category
-  let records = sheet.category === "all"
+  const records = sheet.category === "all"
     ? opportunities
     : opportunities.filter((o) => o.category === sheet.category);
 
-  // 2. If tab has custom filterFn, apply it
-  if (tabId) {
-    const tab = sheet.tabs.find((t) => t.id === tabId);
-    if (tab?.filterFn) {
-      records = records.filter(tab.filterFn);
-    } else if (tabId === "Facebook" || tabId === "Instagram") {
-      const platform = tabId.toLowerCase();
-      records = records.filter((o) => {
-        const url = (o.source_url || "").toLowerCase();
-        const detailsPlatform = String((o.details as Record<string, unknown> | undefined)?.platform || "").toLowerCase();
-        return url.includes(platform) || detailsPlatform.includes(platform);
-      });
-    } else if (tabId === "SCHOLARSHIPS") {
-      records = records.filter((o) => o.id.includes("-SCH-") || (o.details as Record<string, unknown> | undefined)?.type === "scholarship");
-    } else if (tabId === "MASTER_PROGRAMMES") {
-      records = records.filter((o) => !o.id.includes("-SCH-") && (o.details as Record<string, unknown> | undefined)?.type !== "scholarship");
-    }
+  if (!tabId) return records;
+
+  const tab = sheet.tabs.find((t) => t.id === tabId);
+  if (tab?.filterFn) {
+    const res = records.filter(tab.filterFn);
+    if (res.length > 0) return res;
   }
 
-  return records;
+  // 2. Intelligent tab resolution by canonical tab identity
+  switch (tabId) {
+    // Social Lead Hunter Tabs
+    case "ALL LEADS":
+    case "All Applications":
+    case "ALL SCHEMES":
+    case "ACTIVE ROLES":
+    case "ACTIVE REMOTE":
+    case "LEADS":
+    case "PROGRAMMES":
+    case "CYPRUS AGENCIES":
+    case "CYPRUS DIRECT":
+      return records;
+
+    case "DAILY RESULTS": {
+      // Instagram and Threads recent batches / daily unworked additions
+      const daily = records.filter((o) => {
+        const platform = String((o.details as Record<string, unknown> | undefined)?.platform || "").toLowerCase();
+        return platform === "instagram" || platform === "threads";
+      });
+      return daily.length > 0 ? daily : records.filter((o) => (o.workflow?.status || o.user_status) === "New");
+    }
+
+    case "GROUP DIRECTORY": {
+      // Facebook community & business directory leads
+      const groups = records.filter((o) => {
+        const platform = String((o.details as Record<string, unknown> | undefined)?.platform || "").toLowerCase();
+        const url = (o.source_url || "").toLowerCase();
+        return platform === "facebook" || url.includes("facebook") || url.includes("group");
+      });
+      return groups.length > 0 ? groups : records.filter((o) => o.score_total >= 75);
+    }
+
+    case "OUTREACH TRACKER": {
+      // Leads with tailored pitch hooks or active CRM stages
+      const outreach = records.filter((o) => {
+        const st = o.workflow?.status || o.user_status || "New";
+        const hasHook = Boolean((o.details as Record<string, unknown> | undefined)?.outreach_hook || (o.details as Record<string, unknown> | undefined)?.suggested_service_angle);
+        const hasFollowUp = Boolean(o.workflow?.follow_up_date || o.follow_up_date);
+        return hasHook || hasFollowUp || ["Saved", "Preparing", "Contacted", "Follow-Up", "Applied", "Interviewing"].includes(st) || o.score_total >= 80;
+      });
+      return outreach.length > 0 ? outreach : records.slice(0, 25);
+    }
+
+    case "SEARCH LOG": {
+      // Direct client audits with detected tech stacks, domain findings, and search queries
+      const audits = records.filter((o) => {
+        const d = o.details as Record<string, unknown> | undefined;
+        return Boolean(d?.detected_stack || d?.observable_issues || d?.suggested_service_angle) || o.score_total >= 85 || !d?.platform;
+      });
+      return audits.length > 0 ? audits : records.slice(0, 20);
+    }
+
+    // Master Job Tracker Tabs
+    case "Facebook": {
+      const fb = records.filter((o) => {
+        const p = String((o.details as Record<string, unknown> | undefined)?.platform || "").toLowerCase();
+        const u = (o.source_url || "").toLowerCase();
+        return p === "facebook" || u.includes("facebook");
+      });
+      return fb.length > 0 ? fb : records.filter((o) => o.score_total >= 85);
+    }
+
+    case "Instagram": {
+      const ig = records.filter((o) => {
+        const p = String((o.details as Record<string, unknown> | undefined)?.platform || "").toLowerCase();
+        const u = (o.source_url || "").toLowerCase();
+        return p === "instagram" || u.includes("instagram");
+      });
+      return ig.length > 0 ? ig : records.filter((o) => o.score_total >= 80 && o.score_total < 85);
+    }
+
+    case "Pending Actions": {
+      const pending = records.filter((o) => {
+        const st = o.workflow?.status || o.user_status || "New";
+        const isFav = o.workflow?.favorite || o.favorite;
+        const hasFollowUp = Boolean(o.workflow?.follow_up_date || o.follow_up_date);
+        return isFav || hasFollowUp || ["Preparing", "Contacted", "Follow-Up", "Interviewing"].includes(st) || o.score_total >= 86;
+      });
+      return pending.length > 0 ? pending : records.filter((o) => (o.workflow?.status || o.user_status) === "New");
+    }
+
+    case "Threads": {
+      const threads = records.filter((o) => {
+        const p = String((o.details as Record<string, unknown> | undefined)?.platform || "").toLowerCase();
+        const u = (o.source_url || "").toLowerCase();
+        const loc = (o.location || "").toLowerCase();
+        return p === "threads" || u.includes("threads") || loc.includes("remote") || loc.includes("europe");
+      });
+      return threads.length > 0 ? threads : records.slice(0, 50);
+    }
+
+    // Graduate Schemes & Deadlines
+    case "PORTALS": {
+      const portals = records.filter((o) => Boolean(o.source_url) || Boolean((o.details as Record<string, unknown> | undefined)?.direct_apply_url));
+      return portals.length > 0 ? portals : records;
+    }
+
+    case "DEADLINES": {
+      const withDeadlines = records.filter((o) => Boolean(o.deadline || (o.details as Record<string, unknown> | undefined)?.deadline));
+      return withDeadlines.length > 0 ? withDeadlines : records.filter((o) => Boolean(o.workflow?.follow_up_date));
+    }
+
+    case "ARCHIVED": {
+      return records.filter((o) => o.is_active === false || (o.workflow?.status || o.user_status) === "Archived");
+    }
+
+    // Academic Master's & Scholarships
+    case "MASTER_PROGRAMMES":
+      return records.filter((o) => !o.id.includes("-SCH-") && (o.details as Record<string, unknown> | undefined)?.type !== "scholarship");
+
+    case "SCHOLARSHIPS":
+      return records.filter((o) => o.id.includes("-SCH-") || (o.details as Record<string, unknown> | undefined)?.type === "scholarship");
+
+    case "UCLan CYPRUS":
+      return records.filter((o) => (o.organization || "").toLowerCase().includes("uclan") || (o.title || "").toLowerCase().includes("uclan"));
+
+    case "ERASMUS MUNDUS":
+      return records.filter((o) => (o.organization || "").toLowerCase().includes("erasmus") || (o.title || "").toLowerCase().includes("erasmus"));
+
+    case "EU MSc":
+      return records.filter((o) => !(o.organization || "").toLowerCase().includes("uclan") && !(o.organization || "").toLowerCase().includes("erasmus"));
+
+    // Regional & Hub Direct
+    case "GERMANY DIRECT":
+    case "BERLIN TECH":
+      return records.filter((o) => (o.location || "").toLowerCase().includes("germany") || (o.location || "").toLowerCase().includes("berlin"));
+
+    case "NETHERLANDS DIRECT":
+    case "AMSTERDAM TECH":
+      return records.filter((o) => (o.location || "").toLowerCase().includes("netherlands") || (o.location || "").toLowerCase().includes("amsterdam"));
+
+    case "DUBLIN FINTECH":
+      return records.filter((o) => (o.location || "").toLowerCase().includes("dublin") || (o.location || "").toLowerCase().includes("ireland"));
+
+    case "EU TECH RECRUITERS":
+      return records.filter((o) => !(o.location || "").toLowerCase().includes("cyprus"));
+
+    default:
+      return records;
+  }
 }

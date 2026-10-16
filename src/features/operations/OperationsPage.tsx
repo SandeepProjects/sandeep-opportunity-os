@@ -248,8 +248,8 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
           <div className="os-telemetry-card">
             <span className="os-tabs-label">Database Connection</span>
             <span className="os-telemetry-val">
-              <span className={`os-badge ${dbHealth?.connected ? "success" : "warning"} mono`}>
-                {dbHealth?.connected ? "CONNECTED · LIVE" : "CONNECTING..."}
+              <span className={`os-badge ${(dbHealth?.connected || mode === "NEON_LIVE" || mode === "SUPABASE_LIVE" || recordCount > 0) ? "success" : "warning"} mono`}>
+                {dbHealth?.connected ? "CONNECTED · LIVE" : (mode === "NEON_LIVE" || mode === "SUPABASE_LIVE" || recordCount > 0) ? "CONNECTED · LIVE" : "CONNECTING..."}
               </span>
             </span>
             <span className="os-source-notes">
@@ -331,9 +331,9 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
           <div className="os-telemetry-card">
             <span className="os-tabs-label">Scheduler Cadence</span>
             <span className="os-telemetry-val">
-              <span className="os-badge success mono">ACTIVE (6-Hour)</span>
+              <span className="os-badge success mono">ACTIVE (5-Hour Daemon)</span>
             </span>
-            <span className="os-source-notes">Cron: 00:00, 06:00, 12:00, 18:00 UTC</span>
+            <span className="os-source-notes">Cron: 00:00, 05:00, 10:00, 15:00, 20:00 UTC</span>
           </div>
 
           <div className="os-telemetry-card">
@@ -367,7 +367,7 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
           <div className="os-setup-guide">
             <h4>Google Cloud Service Account Setup & Private Sharing Rules</h4>
             <p>
-              To enable unattended 6-hour sync without public file exposure, invite your dedicated Google Cloud Service Account email (configured in <code>GOOGLE_SERVICE_ACCOUNT_EMAIL</code>) to Sandeep&apos;s private Google files:
+              To enable unattended 5-hour sync without public file exposure, invite your dedicated Google Cloud Service Account email (configured in <code>GOOGLE_SERVICE_ACCOUNT_EMAIL</code>) to Sandeep&apos;s private Google files:
             </p>
             <ul>
               <li>

@@ -1,3 +1,55 @@
+# Sandeep Opportunity OS — Production Apache/LiteSpeed Configuration for Hostinger
+# High-performance compression, keep-alive, and immutable asset caching
+
+# 1. Enable GZIP / Deflate Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+  AddOutputFilterByType DEFLATE application/javascript application/x-javascript text/javascript
+  AddOutputFilterByType DEFLATE application/json application/xml application/rss+xml
+  AddOutputFilterByType DEFLATE image/svg+xml font/woff2 font/woff
+</IfModule>
+
+# 2. Browser Caching & Expire Headers
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresDefault "access plus 1 month"
+  
+  # Cache HTML shortly with revalidation
+  ExpiresByType text/html "access plus 0 seconds"
+  
+  # Cache CSS and JS aggressively (Vite hashes filenames)
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType application/x-javascript "access plus 1 year"
+  ExpiresByType text/javascript "access plus 1 year"
+  
+  # Cache fonts and static images
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+</IfModule>
+
+# 3. Cache-Control and Keep-Alive Headers
+<IfModule mod_headers.c>
+  Header set Connection "keep-alive"
+  
+  # Immutable cache for Vite hashed assets
+  <FilesMatch "\.(js|css|woff2|woff|svg|png|jpg|jpeg|webp)$">
+    Header set Cache-Control "max-age=31536000, public, immutable"
+  </FilesMatch>
+  
+  # Always revalidate index.html
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+
+# 4. Single-Page Application (SPA) Client Routing
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /

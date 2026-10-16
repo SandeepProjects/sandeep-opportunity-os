@@ -14,6 +14,7 @@ import {
   getFolderById,
   getSheetById
 } from "../../features/explorer/explorerData";
+import { DATA_SOURCE_REGISTRY } from "../../config/dataSources";
 
 interface AppShellProps {
   currentPath: AppRoutePath;
@@ -97,7 +98,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     "/explorer": opportunities.length,
     "/opportunities": opportunities.length,
     "/agents": 4,
-    "/sources": 6,
+    "/sources": DATA_SOURCE_REGISTRY.length,
     "/freelance": opportunities.filter((o) => o.category === "freelance_leads" && o.is_active !== false).length,
     "/jobs": opportunities.filter((o) => o.category === "visa_jobs" && o.is_active !== false).length,
     "/masters": opportunities.filter((o) => o.category === "masters_scholarships" && o.is_active !== false).length,
@@ -108,7 +109,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         o.favorite ||
         ["Saved", "Preparing", "Contacted", "Applied", "Interviewing", "Follow-Up"].includes(
           o.workflow?.status || o.user_status
-        )
+        ) ||
+        Boolean(o.workflow?.follow_up_date || o.follow_up_date)
     ).length,
     "/saved": opportunities.filter(
       (o) =>
@@ -116,7 +118,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         o.favorite ||
         ["Saved", "Preparing", "Contacted", "Applied", "Interviewing", "Follow-Up"].includes(
           o.workflow?.status || o.user_status
-        )
+        ) ||
+        Boolean(o.workflow?.follow_up_date || o.follow_up_date)
     ).length,
     "/operations": 8,
     "/profile": undefined

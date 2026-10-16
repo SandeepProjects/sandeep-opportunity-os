@@ -110,6 +110,7 @@
   --radius-md: 8px;
   --radius-lg: 10px;
   --transition-fast: 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  --font-display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
 }
@@ -230,6 +231,7 @@ textarea {
 }
 
 .os-brand-title {
+  font-family: var(--font-display);
   font-size: 13.5px;
   font-weight: 600;
   color: var(--text-primary);
@@ -630,6 +632,7 @@ textarea {
 }
 
 .os-page-title {
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -678,7 +681,8 @@ textarea {
 }
 
 .os-metric-value {
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
   font-size: 21px;
   font-weight: 700;
   color: var(--text-primary);
@@ -822,6 +826,7 @@ textarea {
   padding: 9px 14px;
   background-color: var(--bg-elevated);
   border-bottom: 1px solid var(--border-default);
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -1920,6 +1925,7 @@ textarea {
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--text-secondary);
+  font-family: var(--font-display);
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
@@ -2138,6 +2144,7 @@ textarea {
 
 .os-sheet-title {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 20px;
   font-weight: 700;
   color: var(--text-primary);
@@ -2422,3 +2429,83 @@ textarea {
   margin: 0 0 18px;
   line-height: 1.5;
 }
+
+/* ==========================================================================
+   TABLE PAGINATION BAR
+   ========================================================================== */
+.os-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.os-pagination-info {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.os-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.os-pagination-size-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.os-pagination-select {
+  padding: 3px 8px;
+  font-size: 11.5px;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+}
+
+.os-pagination-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.os-page-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.os-page-btn:hover:not(:disabled) {
+  background-color: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+
+.os-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.os-page-current {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 0 4px;
+}
+

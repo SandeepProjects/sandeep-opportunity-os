@@ -129,3 +129,168 @@ export function formatNumber(num) {
   if (num === null || num === undefined) return "0";
   return new Intl.NumberFormat("en-US").format(num);
 }
+
+/**
+ * Decodes all HTML entities (decimal, hex, and named) from text strings.
+ * @param {string | null | undefined} text
+ * @returns {string}
+ */
+export function decodeHtmlEntities(text) {
+  if (!text) return "";
+  let decoded = String(text);
+
+  const namedEntities = {
+    "&euro;": "€",
+    "&pound;": "£",
+    "&yen;": "¥",
+    "&copy;": "©",
+    "&reg;": "®",
+    "&trade;": "™",
+    "&mdash;": "—",
+    "&ndash;": "–",
+    "&hellip;": "…",
+    "&bull;": "•",
+    "&quot;": '"',
+    "&apos;": "'",
+    "&#39;": "'",
+    "&nbsp;": " ",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&Eacute;": "É",
+    "&eacute;": "é",
+    "&Agrave;": "À",
+    "&agrave;": "à",
+    "&Uuml;": "Ü",
+    "&uuml;": "ü",
+    "&Ouml;": "Ö",
+    "&ouml;": "ö",
+    "&Auml;": "Ä",
+    "&auml;": "ä"
+  };
+
+  decoded = decoded.replace(/&#(\d+);/g, (match, code) => {
+    const num = parseInt(code, 10);
+    return !isNaN(num) && num > 0 ? String.fromCharCode(num) : match;
+  });
+
+  decoded = decoded.replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => {
+    const num = parseInt(hex, 16);
+    return !isNaN(num) && num > 0 ? String.fromCharCode(num) : match;
+  });
+
+  for (const [entity, char] of Object.entries(namedEntities)) {
+    if (decoded.includes(entity)) {
+      decoded = decoded.replaceAll(entity, char);
+    }
+  }
+
+  if (decoded.includes("&amp;")) {
+    decoded = decoded.replace(/&amp;#(\d+);/g, (match, code) => {
+      const num = parseInt(code, 10);
+      return !isNaN(num) && num > 0 ? String.fromCharCode(num) : match;
+    });
+    for (const [entity, char] of Object.entries(namedEntities)) {
+      const doubleEntity = "&amp;" + entity.slice(1);
+      if (decoded.includes(doubleEntity)) {
+        decoded = decoded.replaceAll(doubleEntity, char);
+      }
+    }
+    decoded = decoded.replaceAll("&amp;", "&");
+  }
+
+  return decoded;
+}
+
+const MONTH_INDEX = {
+  jan: 0,
+  feb: 1,
+  mar: 2,
+  apr: 3,
+  may: 4,
+  jun: 5,
+  jul: 6,
+  aug: 7,
+  sep: 8,
+  oct: 9,
+  nov: 10,
+  dec: 11
+};
+
+/**
+ * Parses diverse deadline strings into a numeric UTC timestamp ms for accurate chronological sorting.
+ * @param {string | null | undefined} deadline
+ * @returns {number}
+ */
+export function parseDeadlineTimestamp(deadline) {
+  if (!deadline) return Infinity;
+  const clean = decodeHtmlEntities(deadline).trim();
+  if (!clean) return Infinity;
+
+  if (/^(tbc|tba|next round|not yet confirmed|window opens)/i.test(clean) && !clean.match(/202[6-9]/)) {
+    return Infinity;
+  }
+
+  const dmyMatch = clean.match(/(\d{1,2})[./](\d{1,2})[./](202\d)/);
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = parseInt(dmyMatch[2], 10) - 1;
+    const year = parseInt(dmyMatch[3], 10);
+    return Date.UTC(year, month, day);
+  }
+
+  const dayMonthMatch = clean.match(/(\d{1,2})\s+([A-Za-z]{3,9})\s+(202\d)/i);
+  if (dayMonthMatch) {
+    const day = parseInt(dayMonthMatch[1], 10);
+    const mStr = dayMonthMatch[2].toLowerCase().slice(0, 3);
+    const year = parseInt(dayMonthMatch[3], 10);
+    if (MONTH_INDEX[mStr] !== undefined) {
+      return Date.UTC(year, MONTH_INDEX[mStr], day);
+    }
+  }
+
+  const monthYearMatch = clean.match(/([A-Za-z]{3,9})\s+(202\d)/i);
+  if (monthYearMatch) {
+    const mStr = monthYearMatch[1].toLowerCase().slice(0, 3);
+    const year = parseInt(monthYearMatch[2], 10);
+    if (MONTH_INDEX[mStr] !== undefined) {
+      const day = clean.toLowerCase().includes("mid") ? 15 : clean.toLowerCase().includes("early") ? 7 : 28;
+      return Date.UTC(year, MONTH_INDEX[mStr], day);
+    }
+  }
+
+  if (/spring\s+(202\d)/i.test(clean)) {
+    const year = parseInt(clean.match(/spring\s+(202\d)/i)[1], 10);
+    return Date.UTC(year, 3, 30);
+  }
+  if (/summer\s+(202\d)/i.test(clean)) {
+    const year = parseInt(clean.match(/summer\s+(202\d)/i)[1], 10);
+    return Date.UTC(year, 6, 31);
+  }
+  if (/autumn|fall\s+(202\d)/i.test(clean)) {
+    const year = parseInt(clean.match(/(?:autumn|fall)\s+(202\d)/i)[1], 10);
+    return Date.UTC(year, 9, 31);
+  }
+
+  const yearMatch = clean.match(/(202\d)/);
+  if (yearMatch) {
+    return Date.UTC(parseInt(yearMatch[1], 10), 11, 31);
+  }
+
+  return Infinity;
+}
+
+/**
+ * Normalizes priority codes (P0/P1/P2/P3) and labels
+ * @param {string | null | undefined} priority
+ * @returns {string}
+ */
+export function normalizePriority(priority) {
+  if (!priority) return "P1";
+  const p = String(priority).trim();
+  if (p === "P0" || p === "Critical" || p === "Urgent") return "P0";
+  if (p === "P1" || p === "High" || p === "Target") return "P1";
+  if (p === "P2" || p === "Medium" || p === "Normal") return "P2";
+  if (p === "P3" || p === "Low") return "P3";
+  return p;
+}
+

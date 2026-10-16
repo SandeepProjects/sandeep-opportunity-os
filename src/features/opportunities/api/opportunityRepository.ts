@@ -27,6 +27,12 @@ function getLatestVerificationTimestamp(records: OpportunityRecord[]): string {
   return timestamps[timestamps.length - 1] || "UNKNOWN";
 }
 
+export function isProductionOpportunity(opp: OpportunityRecord): boolean {
+  if (!opp || !opp.id) return false;
+  const id = opp.id.toLowerCase();
+  return !id.startsWith("opp_test") && !id.startsWith("test-") && !id.includes("opp-test");
+}
+
 export type DataSourceMode = "NEON_LIVE" | "SUPABASE_LIVE" | "SEED_IMPORT_ADAPTER";
 
 export interface RepositoryState {
@@ -269,7 +275,8 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
         });
 
         const { deduplicated } = deduplicateOpportunities(mergedOpps);
-        void saveCachedOpportunities(deduplicated);
+        const finalOpps = deduplicated.filter(isProductionOpportunity);
+        void saveCachedOpportunities(finalOpps);
 
         let telemetry = data.telemetry as SyncTelemetry | null;
         if (telemetry && !telemetry.nextScheduledSyncUtc) {
@@ -283,11 +290,11 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
 
         return {
           mode: "NEON_LIVE",
-          opportunities: deduplicated,
+          opportunities: finalOpps,
           profile,
           nativeSheetId: NATIVE_SHEET_ID,
           uploadedXlsxId: UPLOADED_XLSX_ID,
-          lastSyncedAt: getLatestVerificationTimestamp(deduplicated),
+          lastSyncedAt: getLatestVerificationTimestamp(finalOpps),
           syncTelemetry: telemetry || loadLatestSyncTelemetry()
         };
       }
@@ -343,17 +350,18 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
         const persistedMap = loadPersistedCrmMap();
         const mappedOpportunities = mapSupabaseRowsToOpportunities(data, persistedMap);
         const { deduplicated } = deduplicateOpportunities(mappedOpportunities);
+        const finalOpps = deduplicated.filter(isProductionOpportunity);
 
         // Cache opportunities persistently for zero-latency retrieval and offline durability
-        void saveCachedOpportunities(deduplicated);
+        void saveCachedOpportunities(finalOpps);
 
         return {
           mode: "SUPABASE_LIVE",
-          opportunities: deduplicated,
+          opportunities: finalOpps,
           profile,
           nativeSheetId: NATIVE_SHEET_ID,
           uploadedXlsxId: UPLOADED_XLSX_ID,
-          lastSyncedAt: getLatestVerificationTimestamp(deduplicated),
+          lastSyncedAt: getLatestVerificationTimestamp(finalOpps),
           syncTelemetry: dbTelemetry || loadLatestSyncTelemetry()
         };
       }
@@ -379,14 +387,15 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
         activity_history: saved.activity_history || opp.activity_history
       };
     });
+    const finalOpps = merged.filter(isProductionOpportunity);
 
     return {
       mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
-      opportunities: merged,
+      opportunities: finalOpps,
       profile,
       nativeSheetId: NATIVE_SHEET_ID,
       uploadedXlsxId: UPLOADED_XLSX_ID,
-      lastSyncedAt: getLatestVerificationTimestamp(merged),
+      lastSyncedAt: getLatestVerificationTimestamp(finalOpps),
       syncTelemetry: loadLatestSyncTelemetry()
     };
   }
@@ -406,14 +415,15 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
       activity_history: saved.activity_history || opp.activity_history
     };
   });
+  const finalOpps = merged.filter(isProductionOpportunity);
 
   return {
     mode: "SEED_IMPORT_ADAPTER",
-    opportunities: merged,
+    opportunities: finalOpps,
     profile,
     nativeSheetId: NATIVE_SHEET_ID,
     uploadedXlsxId: UPLOADED_XLSX_ID,
-    lastSyncedAt: getLatestVerificationTimestamp(merged),
+    lastSyncedAt: getLatestVerificationTimestamp(finalOpps),
     syncTelemetry: loadLatestSyncTelemetry()
   };
 }
@@ -469,8 +479,9 @@ export async function performOpportunitySync(
     }
   }
 
+  const cleanRecords = activeRecords.filter(isProductionOpportunity);
   const map = loadPersistedCrmMap();
-  for (const r of activeRecords) {
+  for (const r of cleanRecords) {
     if (r.workflow || r.user_status) {
       map[r.id] = {
         user_status: r.user_status,
@@ -481,7 +492,7 @@ export async function performOpportunitySync(
     }
   }
   savePersistedCrmMap(map);
-  void saveCachedOpportunities(activeRecords);
+  void saveCachedOpportunities(cleanRecords);
 
   const state: RepositoryState = {
     mode: isNeon
@@ -489,7 +500,7 @@ export async function performOpportunitySync(
       : isSupabaseConfigured && supabaseClient
         ? "SUPABASE_LIVE"
         : "SEED_IMPORT_ADAPTER",
-    opportunities: activeRecords,
+    opportunities: cleanRecords,
     profile:
       candidateProfile ||
       loadPersistedProfile(verifiedSeed.candidate_profile as unknown as CandidateProfile),
