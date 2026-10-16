@@ -191,8 +191,8 @@ test.describe("Sandeep Opportunity OS — enterprise frontend flows", () => {
     await expect(sidebarSync).toHaveCount(0);
   });
 
-  test("Neon Auth Guard: prompts for administrator authentication when unauthenticated and logs in", async ({ page, context }) => {
-    // Clear storage to simulate unauthenticated user
+  test("Open Access: loads Today Command Center immediately without password or login barrier", async ({ page, context }) => {
+    // Clear storage to simulate brand new user
     await context.clearCookies();
     await page.goto("/today");
     await page.evaluate(() => {
@@ -201,13 +201,9 @@ test.describe("Sandeep Opportunity OS — enterprise frontend flows", () => {
     });
     await page.reload();
 
-    // Verify login view is visible
-    await expect(page.locator("h1:has-text('Enterprise Control Center')")).toBeVisible();
-    await expect(page.locator("button:has-text('One-Click Admin Login')")).toBeVisible();
-
-    // Log in via one-click admin button
-    await page.click("button:has-text('One-Click Admin Login')");
+    // Verify app opens directly without any password prompt or login screen
     await expect(page.locator(".os-breadcrumb-current")).toHaveText("Today Command Center", { timeout: 30000 });
+    await expect(page.locator("h1:has-text('Enterprise Control Center')")).toHaveCount(0);
   });
 
   test("Workspace Agents: displays exactly Bago Muse, Kattu AI, Haya Satnam, Haya Arsh and excludes Sandy Muse", async ({ page }) => {

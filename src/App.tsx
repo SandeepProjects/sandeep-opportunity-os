@@ -18,7 +18,7 @@ import { AiAgentsPage } from "./features/agents/AiAgentsPage";
 import { DataSourcesPage } from "./features/sources/DataSourcesPage";
 import { OperationsPage } from "./features/operations/OperationsPage";
 import { ProfilePage } from "./features/profile/ProfilePage";
-import { AuthProvider, AuthGuard, useAuth } from "./features/auth/AuthGuard";
+import { AuthProvider, AuthGuard } from "./features/auth/AuthGuard";
 import { ExplorerWorkspace } from "./features/explorer/ExplorerWorkspace";
 import {
   type ExplorerSelection,
@@ -32,7 +32,6 @@ import type { CandidateProfile, OpportunityRecord, WorkflowState } from "./types
 
 const MainContent: React.FC = () => {
   const { currentPath, searchParams, navigate } = useAppRouter();
-  const { logout } = useAuth();
   const [repoState, setRepoState] = useState<RepositoryState | null>(null);
   const [selectedOpportunity, setSelectedOpportunity] = useState<OpportunityRecord | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
@@ -296,7 +295,6 @@ const MainContent: React.FC = () => {
       isSyncing={isSyncing}
       theme={theme}
       onToggleTheme={toggleTheme}
-      onLogout={logout}
       selection={selection}
       onSelectAgent={handleSelectAgent}
       onSelectWorkspace={handleSelectWorkspace}
