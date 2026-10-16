@@ -257,7 +257,9 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
   try {
     const res = await fetch("/api/opportunities");
     if (res.ok) {
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
       if (Array.isArray(data.opportunities) && data.opportunities.length > 0) {
         const persistedMap = loadPersistedCrmMap();
         const mergedOpps = (data.opportunities as OpportunityRecord[]).map((opp) => {
@@ -299,7 +301,8 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
         };
       }
     }
-  } catch (err) {
+  }
+} catch (err) {
     console.warn("Neon API fetch failed or offline, falling back to Supabase/Cache:", err);
   }
 

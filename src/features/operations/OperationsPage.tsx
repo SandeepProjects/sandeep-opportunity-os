@@ -106,7 +106,11 @@ export const OperationsPage: React.FC<OperationsPageProps> = ({
   useEffect(() => {
     let active = true;
     fetch("/api/db-health")
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) return null;
+        const ct = res.headers.get("content-type") || "";
+        return ct.includes("application/json") ? res.json() : null;
+      })
       .then((data) => {
         if (active && data) setDbHealth(data as NeonDbHealth);
       })

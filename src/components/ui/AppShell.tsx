@@ -260,6 +260,8 @@ export const AppShell: React.FC<AppShellProps> = ({
               <input
                 ref={searchInputRef}
                 type="search"
+                id="os-appshell-search"
+                name="search"
                 className="os-global-search-input"
                 placeholder="Jump to record or org..."
                 aria-label="Global opportunity search (Press / to focus)"

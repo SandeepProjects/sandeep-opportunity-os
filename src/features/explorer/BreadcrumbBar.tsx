@@ -132,6 +132,8 @@ export const BreadcrumbBar: React.FC<BreadcrumbBarProps> = ({
           <input
             ref={searchInputRef}
             type="search"
+            id="os-breadcrumb-search"
+            name="search"
             className="os-global-search-input"
             placeholder="Search records or orgs..."
             aria-label="Global opportunity search (Press / to focus)"
