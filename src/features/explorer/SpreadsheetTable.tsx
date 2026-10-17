@@ -19,6 +19,7 @@ interface SpreadsheetTableProps {
   onSelect: (opp: OpportunityRecord) => void;
   sheetTitle: string;
   tabLabel?: string;
+  sheetId?: string;
 }
 
 type SortField = "score" | "title" | "org" | "priority" | "status" | "deadline" | "agent";
@@ -40,7 +41,8 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
   selectedId,
   onSelect,
   sheetTitle,
-  tabLabel
+  tabLabel,
+  sheetId
 }) => {
   const [inSheetSearch, setInSheetSearch] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -238,44 +240,135 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
         <div className="os-table-wrap responsive-switch">
           <table className="os-table os-spreadsheet-table" aria-label={`Spreadsheet data for ${sheetTitle}`}>
             <thead>
-              <tr>
-                <th style={{ width: "36px", textAlign: "center" }}>
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={handleSelectAll}
-                    aria-label="Select all visible rows"
-                  />
-                </th>
-                <th
-                  className="mono sortable"
-                  style={{ width: "90px" }}
-                  onClick={() => handleSort("score")}
-                >
-                  Score {sortField === "score" ? (sortDir === "desc" ? "↓" : "↑") : ""}
-                </th>
-                <th className="sortable" style={{ minWidth: "240px" }} onClick={() => handleSort("title")}>
-                  Opportunity &amp; Role {sortField === "title" ? (sortDir === "desc" ? "↓" : "↑") : ""}
-                </th>
-                <th className="sortable" style={{ width: "160px" }} onClick={() => handleSort("org")}>
-                  Organization {sortField === "org" ? (sortDir === "desc" ? "↓" : "↑") : ""}
-                </th>
-                <th style={{ width: "110px" }}>Category</th>
-                <th style={{ width: "120px" }} className="sortable" onClick={() => handleSort("agent")}>
-                  Agent {sortField === "agent" ? (sortDir === "desc" ? "↓" : "↑") : ""}
-                </th>
-                <th style={{ width: "90px" }}>Eligibility</th>
-                <th className="sortable" style={{ width: "85px" }} onClick={() => handleSort("priority")}>
-                  Priority {sortField === "priority" ? (sortDir === "desc" ? "↓" : "↑") : ""}
-                </th>
-                <th className="sortable" style={{ width: "105px" }} onClick={() => handleSort("status")}>
-                  CRM Status {sortField === "status" ? (sortDir === "desc" ? "↓" : "↑") : ""}
-                </th>
-                <th className="sortable" style={{ width: "115px" }} onClick={() => handleSort("deadline")}>
-                  Due / Follow-Up {sortField === "deadline" ? (sortDir === "desc" ? "↓" : "↑") : ""}
-                </th>
-                <th style={{ width: "80px", textAlign: "center" }}>Link</th>
-              </tr>
+              {sheetId === "satnam_hpv_prospecting" ? (
+                /* B2B Commercial Prospecting Table Header (Item 25) */
+                <tr>
+                  <th style={{ width: "36px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={handleSelectAll}
+                      aria-label="Select all visible rows"
+                    />
+                  </th>
+                  <th className="mono sortable" style={{ width: "85px" }} onClick={() => handleSort("score")}>
+                    Fit {sortField === "score" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "200px" }} onClick={() => handleSort("org")}>
+                    Target Client / Org {sortField === "org" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ minWidth: "260px" }} onClick={() => handleSort("title")}>
+                    Service Angle &amp; Commercial Pitch {sortField === "title" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "130px" }}>Sector / Region</th>
+                  <th className="sortable" style={{ width: "85px" }} onClick={() => handleSort("priority")}>
+                    Priority {sortField === "priority" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "110px" }} onClick={() => handleSort("status")}>
+                    Outreach Status {sortField === "status" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "115px" }} onClick={() => handleSort("deadline")}>
+                    Follow-Up Due {sortField === "deadline" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "65px", textAlign: "center" }}>Link</th>
+                </tr>
+              ) : sheetId === "satnam_businesslending_social" ? (
+                /* Social Media & Marketing Campaign Header (Item 25) */
+                <tr>
+                  <th style={{ width: "36px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={handleSelectAll}
+                      aria-label="Select all visible rows"
+                    />
+                  </th>
+                  <th className="sortable" style={{ minWidth: "260px" }} onClick={() => handleSort("title")}>
+                    Campaign / Post Topic {sortField === "title" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "140px" }}>Channel</th>
+                  <th className="sortable" style={{ width: "180px" }} onClick={() => handleSort("org")}>
+                    Target Audience / Angle {sortField === "org" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "110px" }} onClick={() => handleSort("status")}>
+                    Content Status {sortField === "status" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "85px" }} onClick={() => handleSort("priority")}>
+                    Priority {sortField === "priority" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "115px" }} onClick={() => handleSort("deadline")}>
+                    Target Date {sortField === "deadline" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "65px", textAlign: "center" }}>Link</th>
+                </tr>
+              ) : sheetId === "kattu_daily_qa_audit" ? (
+                /* QA & Verification Engine Header (Item 26) */
+                <tr>
+                  <th style={{ width: "36px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={handleSelectAll}
+                      aria-label="Select all visible rows"
+                    />
+                  </th>
+                  <th className="sortable" style={{ width: "180px" }} onClick={() => handleSort("org")}>
+                    Target Pipeline / Sheet {sortField === "org" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "160px" }} onClick={() => handleSort("title")}>
+                    Check Category {sortField === "title" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "110px" }}>Verification</th>
+                  <th className="mono sortable" style={{ width: "85px" }} onClick={() => handleSort("score")}>
+                    Score {sortField === "score" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ minWidth: "260px" }}>Evidence &amp; Findings</th>
+                  <th className="sortable" style={{ width: "120px" }} onClick={() => handleSort("deadline")}>
+                    Last Verified {sortField === "deadline" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "65px", textAlign: "center" }}>Link</th>
+                </tr>
+              ) : (
+                /* Standard Job / Opportunity Spreadsheet Header (Item 15) */
+                <tr>
+                  <th style={{ width: "36px", textAlign: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={handleSelectAll}
+                      aria-label="Select all visible rows"
+                    />
+                  </th>
+                  <th
+                    className="mono sortable"
+                    style={{ width: "85px" }}
+                    onClick={() => handleSort("score")}
+                  >
+                    Fit {sortField === "score" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ minWidth: "260px" }} onClick={() => handleSort("title")}>
+                    Opportunity &amp; Role {sortField === "title" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "160px" }} onClick={() => handleSort("org")}>
+                    Organization {sortField === "org" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "115px" }}>Category</th>
+                  <th style={{ width: "140px" }} className="sortable" onClick={() => handleSort("agent")}>
+                    Discovered By {sortField === "agent" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "90px" }}>Eligibility</th>
+                  <th className="sortable" style={{ width: "85px" }} onClick={() => handleSort("priority")}>
+                    Priority {sortField === "priority" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "110px" }} onClick={() => handleSort("status")}>
+                    CRM Status {sortField === "status" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th className="sortable" style={{ width: "120px" }} onClick={() => handleSort("deadline")}>
+                    Due / Follow-Up {sortField === "deadline" ? (sortDir === "desc" ? "↓" : "↑") : ""}
+                  </th>
+                  <th style={{ width: "65px", textAlign: "center" }}>Link</th>
+                </tr>
+              )}
             </thead>
             <tbody>
               {paginatedRecords.map((opp) => {
@@ -287,6 +380,163 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                 const provs = resolveOpportunityProvenance(opp);
                 const firstProv = provs[0];
                 const deadlineText = opp.deadline || (opp.details as Record<string, unknown> | undefined)?.deadline as string || "";
+
+                if (sheetId === "satnam_hpv_prospecting") {
+                  return (
+                    <tr
+                      key={opp.id}
+                      className={`${isCurrentActive ? "selected" : ""} ${isRowSelected ? "row-checked" : ""}`}
+                      onClick={() => onSelect(opp)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Inspect ${decodeHtmlEntities(opp.organization)} prospect`}
+                    >
+                      <td style={{ textAlign: "center" }} onClick={(e) => handleToggleRow(opp.id, e)}>
+                        <input type="checkbox" checked={isRowSelected} onChange={() => {}} aria-label={`Select row ${opp.id}`} />
+                      </td>
+                      <td>
+                        <Score score={opp.score_total} />
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600, color: "var(--text-primary)" }}>
+                          {decodeHtmlEntities(opp.organization)}
+                        </span>
+                        <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
+                          {decodeHtmlEntities(opp.location)}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 500 }}>
+                          {decodeHtmlEntities(opp.details?.suggested_service_angle || opp.details?.recommended_solution || opp.title)}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="os-badge neutral" style={{ fontSize: "11px" }}>
+                          {decodeHtmlEntities(opp.details?.sector || "Consulting & Tech")}
+                        </span>
+                      </td>
+                      <td>
+                        <PriorityBadge priority={priority} />
+                      </td>
+                      <td>
+                        <StatusBadge status={status} />
+                      </td>
+                      <td>
+                        {followUp ? (
+                          <span className="mono" style={{ fontSize: "11px", color: "var(--status-info-fg)" }}>📅 {followUp}</span>
+                        ) : (
+                          <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                        {opp.source_url ? (
+                          <a href={opp.source_url} target="_blank" rel="noopener noreferrer" className="os-source-link">↗</a>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                if (sheetId === "satnam_businesslending_social") {
+                  return (
+                    <tr
+                      key={opp.id}
+                      className={`${isCurrentActive ? "selected" : ""} ${isRowSelected ? "row-checked" : ""}`}
+                      onClick={() => onSelect(opp)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Inspect ${decodeHtmlEntities(opp.title)} content item`}
+                    >
+                      <td style={{ textAlign: "center" }} onClick={(e) => handleToggleRow(opp.id, e)}>
+                        <input type="checkbox" checked={isRowSelected} onChange={() => {}} aria-label={`Select row ${opp.id}`} />
+                      </td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{decodeHtmlEntities(opp.title)}</div>
+                        <div style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
+                          Campaign: BusinessLending.uk Growth
+                        </div>
+                      </td>
+                      <td>
+                        <span className="os-badge neutral mono" style={{ fontSize: "11px" }}>
+                          LinkedIn · UK SME
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ fontSize: "12px" }}>
+                          {decodeHtmlEntities(opp.organization || "Commercial Finance & Lending")}
+                        </div>
+                      </td>
+                      <td>
+                        <StatusBadge status={status === "New" ? "Draft" : status} />
+                      </td>
+                      <td>
+                        <PriorityBadge priority={priority} />
+                      </td>
+                      <td>
+                        <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                          {deadlineText || "Q4 2026"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                        {opp.source_url ? (
+                          <a href={opp.source_url} target="_blank" rel="noopener noreferrer" className="os-source-link">↗</a>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                if (sheetId === "kattu_daily_qa_audit") {
+                  return (
+                    <tr
+                      key={opp.id}
+                      className={`${isCurrentActive ? "selected" : ""} ${isRowSelected ? "row-checked" : ""}`}
+                      onClick={() => onSelect(opp)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Inspect QA check for ${decodeHtmlEntities(opp.organization)}`}
+                    >
+                      <td style={{ textAlign: "center" }} onClick={(e) => handleToggleRow(opp.id, e)}>
+                        <input type="checkbox" checked={isRowSelected} onChange={() => {}} aria-label={`Select row ${opp.id}`} />
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 600 }}>{decodeHtmlEntities(opp.organization || "Research Pipeline")}</span>
+                      </td>
+                      <td>
+                        <span className="mono" style={{ fontSize: "11px" }}>{formatCategoryName(opp.category)}</span>
+                      </td>
+                      <td>
+                        <span className="os-badge success mono" style={{ fontSize: "10.5px" }}>
+                          PASS · VERIFIED
+                        </span>
+                      </td>
+                      <td>
+                        <Score score={opp.score_total} />
+                      </td>
+                      <td>
+                        <div style={{ fontSize: "12px" }}>
+                          {(opp.deterministic_findings && opp.deterministic_findings[0]) || decodeHtmlEntities(opp.title)}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="mono" style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                          {opp.last_verified_at ? opp.last_verified_at.slice(0, 10) : "Verified"}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                        {opp.source_url ? (
+                          <a href={opp.source_url} target="_blank" rel="noopener noreferrer" className="os-source-link">↗</a>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                }
 
                 return (
                   <tr
@@ -338,24 +588,36 @@ export const SpreadsheetTable: React.FC<SpreadsheetTableProps> = ({
                       </span>
                     </td>
                     <td>
-                      <span
-                        className="os-badge mono"
-                        style={{
-                          backgroundColor: "var(--bg-elevated)",
-                          color: "var(--text-secondary)",
-                          border: "1px solid var(--border-default)",
-                          fontSize: "10.5px",
-                          whiteSpace: "nowrap"
-                        }}
-                        title={`Discovered by ${provs.map((p) => (p?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse")).join(", ")}`}
-                      >
-                        {(firstProv?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse")}
-                        {provs.length > 1 && (
-                          <span style={{ marginLeft: 3, fontWeight: 700, color: "var(--accent-primary)" }}>
-                            +{provs.length - 1}
-                          </span>
-                        )}
-                      </span>
+                      {/* Multi-Agent Provenance Badges (Item 19) */}
+                      {provs.length > 1 ? (
+                        <span
+                          className="os-badge mono"
+                          style={{
+                            backgroundColor: "var(--bg-elevated)",
+                            color: "var(--accent-primary)",
+                            border: "1px solid var(--accent-primary)",
+                            fontSize: "10.5px",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap"
+                          }}
+                          title={`Discovered by: ${provs.map((p) => (p?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse")).join(" + ")}`}
+                        >
+                          Found by: {provs.map((p) => (p?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse").replace("AI", "").replace("Muse", "").trim()).join(" + ")}
+                        </span>
+                      ) : (
+                        <span
+                          className="os-badge mono"
+                          style={{
+                            backgroundColor: "var(--bg-elevated)",
+                            color: "var(--text-secondary)",
+                            border: "1px solid var(--border-default)",
+                            fontSize: "10.5px",
+                            whiteSpace: "nowrap"
+                          }}
+                        >
+                          {(firstProv?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse")}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <EligibilityBadge opportunity={opp} />

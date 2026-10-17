@@ -4,7 +4,7 @@ import type { OpportunityRecord } from "../../types/opportunity";
 import { CompactMetricCard, type CompactMetricItem } from "./CompactMetricCard";
 import { SheetTabs } from "./SheetTabs";
 import { SpreadsheetTable } from "./SpreadsheetTable";
-import { filterOpportunitiesForSheetTab } from "./explorerData";
+import { filterOpportunitiesForSheetTab, getDynamicSheetTabs } from "./explorerData";
 
 interface SheetWorkspaceProps {
   sheet: SheetConfig;
@@ -29,14 +29,19 @@ export const SheetWorkspace: React.FC<SheetWorkspaceProps> = ({
   onSelectOpportunity,
   lastSyncedAt
 }) => {
+  // Resolve dynamic tabs (including dynamically discovered dated tabs for Kattu AI)
+  const effectiveTabs = useMemo(() => {
+    return getDynamicSheetTabs(sheet, opportunities);
+  }, [sheet, opportunities]);
+
   // 1. Calculate counts for each tab in this sheet
   const tabCounts: Record<string, number> = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const tab of sheet.tabs) {
+    for (const tab of effectiveTabs) {
       counts[tab.id] = filterOpportunitiesForSheetTab(opportunities, sheet, tab.id).length;
     }
     return counts;
-  }, [opportunities, sheet]);
+  }, [opportunities, sheet, effectiveTabs]);
 
   // 2. Filter opportunities for the active tab
   const activeTabRecords = useMemo(() => {
@@ -109,7 +114,7 @@ export const SheetWorkspace: React.FC<SheetWorkspaceProps> = ({
     }
   ];
 
-  const currentTabConfig = sheet.tabs.find((t) => t.id === selectedTabId);
+  const currentTabConfig = effectiveTabs.find((t) => t.id === selectedTabId);
   const activeTabLabel = currentTabConfig?.label || selectedTabId;
 
   return (
@@ -140,19 +145,21 @@ export const SheetWorkspace: React.FC<SheetWorkspaceProps> = ({
           </div>
         </div>
 
-        {sheet.externalUrl && (
-          <a
-            href={sheet.externalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-secondary"
-            title="Open in Google Drive / Google Sheets"
-            style={{ fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-          >
-            <span>Open in Google Sheets</span>
-            <span aria-hidden="true">↗</span>
-          </a>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {sheet.externalUrl && (
+            <a
+              href={sheet.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary"
+              title="Open in Google Drive / Google Sheets"
+              style={{ fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <span>Open in Google Sheets</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          )}
+        </div>
       </div>
 
       {/* 3–4 Compact Summary Cards */}
@@ -160,7 +167,7 @@ export const SheetWorkspace: React.FC<SheetWorkspaceProps> = ({
 
       {/* Horizontal Internal Sheet Tabs */}
       <SheetTabs
-        tabs={sheet.tabs}
+        tabs={effectiveTabs}
         selectedTabId={selectedTabId}
         onSelectTab={onSelectTab}
         counts={tabCounts}
@@ -171,6 +178,7 @@ export const SheetWorkspace: React.FC<SheetWorkspaceProps> = ({
         records={activeTabRecords}
         selectedId={selectedOpportunityId}
         onSelect={onSelectOpportunity}
+        sheetId={sheet.id}
         sheetTitle={sheet.name}
         tabLabel={activeTabLabel}
       />

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   WORKSPACE_TREE,
   type WorkspaceConfig,
@@ -27,12 +27,23 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
     ws_bagomuse: true,
     f_social_hunter: true,
     ws_musesatnam: true,
-    f_cyprus_visa: true,
-    ws_kattu: false,
+    f_global_jobs: true,
+    ws_kattu: true,
+    f_regional_fleet: true,
     ws_haya_arsh: false,
-    ws_job_apply: false,
-    ws_job_cms_agents: true
+    ws_job_apply: false
   });
+
+  // Automatically expand active workspace and active folder when selection changes
+  useEffect(() => {
+    if (selection.workspaceId) {
+      setOpenNodes((prev) => ({
+        ...prev,
+        [selection.workspaceId]: true,
+        ...(selection.folderId ? { [selection.folderId]: true } : {})
+      }));
+    }
+  }, [selection.workspaceId, selection.folderId]);
 
   const toggleNode = (nodeId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -42,6 +53,18 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
     }));
   };
 
+  // Sort workspaces so active agent's workspace is prominently placed
+  const sortedWorkspaces = useMemo(() => {
+    const activeWsId = selection.workspaceId;
+    return [...WORKSPACE_TREE].sort((a, b) => {
+      if (a.id === activeWsId) return -1;
+      if (b.id === activeWsId) return 1;
+      if (selection.agentId && a.ownerAgentId === selection.agentId) return -1;
+      if (selection.agentId && b.ownerAgentId === selection.agentId) return 1;
+      return 0;
+    });
+  }, [selection.workspaceId, selection.agentId]);
+
   return (
     <div className="os-drive-explorer" role="tree" aria-label="Drive Explorer File Tree">
       <div className="os-nav-group-label" style={{ padding: "10px 12px 6px", letterSpacing: "0.05em" }}>
@@ -49,7 +72,7 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
       </div>
 
       <div className="os-tree-root">
-        {WORKSPACE_TREE.map((ws) => {
+        {sortedWorkspaces.map((ws) => {
           const isWsOpen = Boolean(openNodes[ws.id]);
           const isWsSelected = selection.workspaceId === ws.id && !selection.folderId && !selection.sheetId;
 
@@ -84,6 +107,11 @@ export const DriveExplorer: React.FC<DriveExplorerProps> = ({
               {/* Workspace Children (Folders & Sheets) */}
               {isWsOpen && (
                 <div className="os-tree-children">
+                  {ws.folders.length === 0 && ws.sheets.length === 0 && (
+                    <div style={{ padding: "6px 8px", fontSize: "11px", color: "var(--text-muted)", fontStyle: "italic" }}>
+                      Setup Required · No data sources connected
+                    </div>
+                  )}
                   {/* Folders */}
                   {ws.folders.map((folder) => {
                     const isFolderOpen = Boolean(openNodes[folder.id]);

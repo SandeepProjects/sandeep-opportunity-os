@@ -135,7 +135,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
         sheets: [
           {
             id: "muse_social_job_hunter",
-            name: "FB / Insta Applications",
+            name: "Facebook & Instagram Applications",
             spreadsheetId: "1-jsydfLBJibFJjy4dabDCOZpG7m_6bJxdxPYRWHJ1x0",
             sourceId: "muse_social_job_hunter",
             fileType: "google_sheet",
@@ -152,7 +152,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
           },
           {
             id: "graduate_schemes_tracker",
-            name: "GRADUATE SCHEMES - MASTER TRACKER",
+            name: "Graduate Schemes Master Tracker",
             sourceId: "graduate_schemes_tracker",
             fileType: "google_sheet",
             category: "visa_jobs",
@@ -166,7 +166,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
           },
           {
             id: "master_job_application_tracker",
-            name: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
+            name: "Master Job Application Tracker",
             driveId: "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1",
             sourceId: "master_job_application_tracker",
             fileType: "xlsx",
@@ -239,7 +239,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
         sheets: [
           {
             id: "masters_workbook",
-            name: "master-spreadsheet.xlsx",
+            name: "Master's & Scholarships Workbook",
             driveId: "156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj",
             spreadsheetId: "156pTG6IBQ00x6AP2BFm3sg-zy_iZ4PLj",
             sourceId: "masters_workbook",
@@ -272,7 +272,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
         sheets: [
           {
             id: "sheet_agencies_directory",
-            name: "Agencies Final Registry",
+            name: "Recruitment Agencies Directory",
             fileType: "csv",
             category: "freelance_leads",
             description: "Curated tech recruitment partners across Limassol, Nicosia, and Athens.",
@@ -457,7 +457,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
         sheets: [
           {
             id: "kattu_india_regional",
-            name: "Projects KattuAI — India Regional Job Research",
+            name: "India Regional Job Research",
             spreadsheetId: "15hOKXuvZDIrytvqRLQNvLQx4w7wTdFS-DSnvT1XIkOw",
             sourceId: "kattu_india_regional",
             fileType: "google_sheet",
@@ -474,7 +474,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
           },
           {
             id: "kattu_eu_regional",
-            name: "Projects KattuAI — EU Regional Job Research",
+            name: "EU Regional Job Research",
             spreadsheetId: "1wi4i3qpDLOzfNXa5_AR6Bvhb4w40xTr4QQmM9qGAzj4",
             sourceId: "kattu_eu_regional",
             fileType: "google_sheet",
@@ -491,7 +491,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
           },
           {
             id: "kattu_uk_regional",
-            name: "Projects KattuAI — UK Regional Job Research",
+            name: "UK Regional Job Research",
             spreadsheetId: "1ECo6MFxrDXpOQlTyCRGor5XUgE8e4t2zL-LXWJRFN5A",
             sourceId: "kattu_uk_regional",
             fileType: "google_sheet",
@@ -508,7 +508,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
           },
           {
             id: "kattu_usa_regional",
-            name: "Projects KattuAI — USA Regional Job Research",
+            name: "USA Regional Job Research",
             spreadsheetId: "1tIi0TiQ0L1fNUcqTWTsRVJhV-69g3pbrHGGkhmGGvyo",
             sourceId: "kattu_usa_regional",
             fileType: "google_sheet",
@@ -532,7 +532,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
         sheets: [
           {
             id: "kattu_daily_qa_audit",
-            name: "Projects KattuAI — Daily Data QA & Verification",
+            name: "Daily Data QA & Verification",
             sourceId: "kattu_daily_qa_audit",
             fileType: "google_sheet",
             category: "remote_jobs",
@@ -634,7 +634,7 @@ export const WORKSPACE_TREE: WorkspaceConfig[] = [
         sheets: [
           {
             id: "master_job_application_tracker_ref",
-            name: "MASTER_JOB_APPLICATION_TRACKER.xlsx",
+            name: "Master Job Application Tracker",
             driveId: "1F8p-KNl8PLMfRIzRxZ0nFORRHOuF5qL1",
             sourceId: "master_job_application_tracker",
             fileType: "xlsx",
@@ -781,6 +781,95 @@ export function getSheetById(sheetId: string): {
 }
 
 /**
+ * Dynamically resolves tabs for a sheet.
+ * For Kattu regional sheets (or any sheet with daily research),
+ * dynamically extracts unique dates from opportunity records (e.g. 20Oct, 21Oct, 22Oct, 23Oct, 05Nov)
+ * so that future dates appear automatically from the data without requiring code redeployments.
+ */
+export function getDynamicSheetTabs(
+  sheet: SheetConfig | undefined,
+  opportunities: OpportunityRecord[]
+): SheetTabConfig[] {
+  if (!sheet) return [];
+  if (!sheet.id.startsWith("kattu_") || sheet.id === "kattu_daily_qa_audit") {
+    return sheet.tabs;
+  }
+
+  const relevantRecords = opportunities.filter((o) => o.category === sheet.category);
+  const dateSet = new Set<string>();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  for (const record of relevantRecords) {
+    const details = record.details as Record<string, unknown> | undefined;
+    if (typeof details?.tab === "string" && /^\d{1,2}[A-Za-z]{3}$/.test(details.tab)) {
+      dateSet.add(details.tab);
+    }
+    if (typeof details?.sheet_tab === "string" && /^\d{1,2}[A-Za-z]{3}$/.test(details.sheet_tab)) {
+      dateSet.add(details.sheet_tab);
+    }
+    const rawDate = record.published_date || record.created_at || (details?.date as string | undefined);
+    if (rawDate && typeof rawDate === "string") {
+      const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        const monthNum = parseInt(match[2], 10);
+        const dayNum = parseInt(match[3], 10);
+        if (monthNum >= 1 && monthNum <= 12) {
+          const monthStr = monthNames[monthNum - 1];
+          const formatted = `${dayNum < 10 ? "0" + dayNum : dayNum}${monthStr}`;
+          dateSet.add(formatted);
+        }
+      }
+    }
+  }
+
+  // Ensure baseline dates exist as fallbacks
+  dateSet.add("20Oct");
+  dateSet.add("21Oct");
+  dateSet.add("22Oct");
+
+  const sortedDates = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+
+  const dynamicTabs: SheetTabConfig[] = [
+    { id: "ALL ROLES", label: "ALL ROLES" }
+  ];
+
+  for (const dateCode of sortedDates) {
+    dynamicTabs.push({
+      id: dateCode,
+      label: dateCode,
+      filterFn: (opp) => {
+        const d = opp.details as Record<string, unknown> | undefined;
+        if (d?.tab === dateCode || d?.sheet_tab === dateCode) return true;
+        const rawDate = opp.published_date || opp.created_at || (d?.date as string | undefined);
+        if (rawDate && typeof rawDate === "string") {
+          const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (match) {
+            const monthNum = parseInt(match[2], 10);
+            const dayNum = parseInt(match[3], 10);
+            const monthStr = monthNames[monthNum - 1];
+            const formatted = `${dayNum < 10 ? "0" + dayNum : dayNum}${monthStr}`;
+            return formatted.toLowerCase() === dateCode.toLowerCase();
+          }
+        }
+        return false;
+      }
+    });
+  }
+
+  if (sheet.id === "kattu_india_regional") {
+    dynamicTabs.push({ id: "INTERVIEWS", label: "INTERVIEWS", filterFn: (opp) => opp.workflow?.status === "Interviewing" });
+  } else if (sheet.id === "kattu_eu_regional") {
+    dynamicTabs.push({ id: "CYPRUS ROLES", label: "CYPRUS ROLES", filterFn: (opp) => (opp.location || "").toLowerCase().includes("cyprus") });
+  } else if (sheet.id === "kattu_uk_regional") {
+    dynamicTabs.push({ id: "GRADUATE TRACK", label: "GRADUATE TRACK", filterFn: (opp) => (opp.title || "").toLowerCase().includes("graduate") || (opp.title || "").toLowerCase().includes("trainee") });
+  } else if (sheet.id === "kattu_usa_regional") {
+    dynamicTabs.push({ id: "GLOBAL CONTRACTOR", label: "GLOBAL CONTRACTOR", filterFn: (opp) => (opp.work_model || "").toLowerCase().includes("contract") || (opp.location || "").toLowerCase().includes("remote") });
+  }
+
+  return dynamicTabs;
+}
+
+/**
  * Filter opportunities belonging to a specific sheet and tab
  */
 export function filterOpportunitiesForSheetTab(
@@ -819,6 +908,29 @@ export function filterOpportunitiesForSheetTab(
   if (tab?.filterFn) {
     const res = records.filter(tab.filterFn);
     return res;
+  }
+
+  // 1c. Dynamic dated tab resolution (e.g. 20Oct, 21Oct, 22Oct, 23Oct, 05Nov)
+  const dateMatch = tabId.match(/^(\d{1,2})([A-Za-z]{3})$/i);
+  if (dateMatch) {
+    const monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+    const targetMonth = dateMatch[2].toLowerCase();
+    const targetDay = parseInt(dateMatch[1], 10);
+    const dateFiltered = records.filter((opp) => {
+      const d = opp.details as Record<string, unknown> | undefined;
+      if (d?.tab === tabId || d?.sheet_tab === tabId) return true;
+      const rawDate = opp.published_date || opp.created_at || (d?.date as string | undefined);
+      if (rawDate && typeof rawDate === "string") {
+        const match = rawDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          const m = monthNames[parseInt(match[2], 10) - 1];
+          const day = parseInt(match[3], 10);
+          return m === targetMonth && day === targetDay;
+        }
+      }
+      return false;
+    });
+    return dateFiltered.length > 0 ? dateFiltered : records.slice(0, 20);
   }
 
   // 2. Intelligent tab resolution by canonical tab identity

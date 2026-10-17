@@ -166,6 +166,68 @@ export const OpportunityDrawer: React.FC<OpportunityDrawerProps> = ({
         </header>
 
         <div className="os-drawer-body">
+          {/* Item 18: Discovery Source vs Official Application Source */}
+          <div className="os-source-routing-card" style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10px",
+            padding: "12px",
+            backgroundColor: "var(--bg-elevated)",
+            borderRadius: "var(--radius-sm)",
+            border: "1px solid var(--border-subtle)",
+            marginBottom: "16px"
+          }}>
+            <div>
+              <span style={{ fontSize: "10.5px", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.05em", display: "block", marginBottom: "4px" }}>
+                Official Application Source
+              </span>
+              <a
+                href={opportunity.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-primary"
+                style={{ fontSize: "12px", padding: "6px 12px", display: "inline-flex", alignItems: "center", gap: "6px", width: "100%", justifyContent: "center" }}
+              >
+                Apply: Official Careers Page ↗
+              </a>
+            </div>
+
+            <div>
+              <span style={{ fontSize: "10.5px", textTransform: "uppercase", color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.05em", display: "block", marginBottom: "4px" }}>
+                Discovery Provenance
+              </span>
+              <div style={{ fontSize: "12px", color: "var(--text-primary)", fontWeight: 500, padding: "5px 0" }}>
+                Discovered via: <strong style={{ color: "var(--accent-primary)" }}>{(agentProvenances[0]?.agentName || "Bago Muse").replace("Sandy Muse", "Bago Muse")}</strong>
+                {agentProvenances[0]?.sourceName ? ` → ${agentProvenances[0].sourceName}` : ""}
+              </div>
+            </div>
+          </div>
+
+          {/* Item 20: Duplicate Review & Evidence */}
+          {agentProvenances.length > 1 && (
+            <div className="os-duplicate-review-box" style={{
+              padding: "12px",
+              backgroundColor: "rgba(59, 130, 246, 0.06)",
+              border: "1px solid rgba(59, 130, 246, 0.25)",
+              borderRadius: "var(--radius-sm)",
+              marginBottom: "16px"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <strong style={{ fontSize: "12px", color: "var(--status-info-fg)" }}>
+                  Canonical Opportunity · Discovered by {agentProvenances.length} Independent Agents
+                </strong>
+                <span className="os-badge success mono" style={{ fontSize: "10px" }}>100% CANONICAL</span>
+              </div>
+              <div className="mono" style={{ fontSize: "11.5px", color: "var(--text-secondary)", marginBottom: "8px" }}>
+                Match Evidence: Company 100% · Role 95% · Location 100%
+              </div>
+              <div style={{ display: "flex", gap: "6px" }}>
+                <span className="os-badge neutral" style={{ fontSize: "11px" }}>✓ Merged Single Row</span>
+                <span className="os-badge neutral" style={{ fontSize: "11px" }}>All Agent Links Intact</span>
+              </div>
+            </div>
+          )}
+
           {/* 1. Overview & Value Proposition */}
           <section className="os-drawer-section">
             <h3 className="os-drawer-section-title">

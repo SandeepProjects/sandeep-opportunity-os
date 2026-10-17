@@ -35,6 +35,23 @@ export function formatCategoryName(category: string | null | undefined): string 
 }
 
 /**
+ * Converts SCREAMING_SNAKE_CASE or raw filenames into clean human titles.
+ * e.g., 'MASTER_JOB_APPLICATION_TRACKER.xlsx' -> 'Master Job Application Tracker'
+ * e.g., 'GRADUATE SCHEMES - MASTER TRACKER' -> 'Graduate Schemes Master Tracker'
+ */
+export function humanizeFileName(name: string | null | undefined): string {
+  if (!name) return "";
+  let clean = name.replace(/\.(xlsx|csv|tsv|gsheet)$/i, "");
+  // Replace underscores and multiple dashes
+  clean = clean.replace(/[_]+/g, " ").replace(/\s*-\s*/g, " · ");
+  // If all uppercase, convert to Title Case
+  if (clean === clean.toUpperCase()) {
+    clean = clean.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return clean.trim();
+}
+
+/**
  * Returns human-readable description for a category.
  */
 export function formatCategoryDescription(category: string | null | undefined): string {

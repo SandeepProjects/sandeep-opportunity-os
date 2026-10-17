@@ -16,5 +16,5 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   } else if (status === "Rejected" || status === "Archived") {
     variant = "danger";
   }
-  return <span className={`os-badge ${variant}`}>{status}</span>;
+  return <span className={`os-status-pill status-${variant} os-badge ${variant}`}>{status}</span>;
 };

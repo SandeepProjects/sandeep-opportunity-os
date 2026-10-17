@@ -10,7 +10,8 @@ import {
   type ExplorerAgent,
   getWorkspaceById,
   getFolderById,
-  getSheetById
+  getSheetById,
+  getDynamicSheetTabs
 } from "./explorerData";
 import { SheetWorkspace } from "./SheetWorkspace";
 import { FolderOverview } from "./FolderOverview";
@@ -55,16 +56,17 @@ export const ExplorerWorkspace: React.FC<ExplorerWorkspaceProps> = ({
     return WORKSPACE_AGENTS.find((a) => a.id === selection.agentId);
   }, [selection.agentId]);
 
-  // Determine current active tab
+  // Determine current active tab (including dynamically discovered tabs)
   const currentTabId = useMemo<string>(() => {
-    if (!activeSheet || !activeSheet.tabs || activeSheet.tabs.length === 0) {
+    const effectiveTabs = getDynamicSheetTabs(activeSheet, opportunities);
+    if (!activeSheet || !effectiveTabs || effectiveTabs.length === 0) {
       return "";
     }
-    if (selection.tabId && activeSheet.tabs.some((t) => t.id === selection.tabId)) {
+    if (selection.tabId && effectiveTabs.some((t) => t.id === selection.tabId)) {
       return selection.tabId;
     }
-    return activeSheet.tabs[0].id;
-  }, [activeSheet, selection.tabId]);
+    return effectiveTabs[0].id;
+  }, [activeSheet, selection.tabId, opportunities]);
 
   const handleOpenSheet = useCallback(
     (sheet: SheetConfig) => {

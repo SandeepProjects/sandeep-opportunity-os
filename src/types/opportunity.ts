@@ -130,6 +130,10 @@ export interface OpportunityRecord {
   action_reason?: string;
   follow_up_bucket?: FollowUpBucket;
   queue_priority_score?: number;
+  published_date?: string;
+  created_at?: string;
+  work_model?: string;
+  source_id?: string;
 }
 
 export interface CandidateProfile {

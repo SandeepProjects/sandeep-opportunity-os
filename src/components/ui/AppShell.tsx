@@ -10,6 +10,7 @@ import {
   type WorkspaceConfig,
   type FolderConfig,
   type SheetConfig,
+  WORKSPACE_AGENTS,
   getWorkspaceById,
   getFolderById,
   getSheetById
@@ -187,8 +188,10 @@ export const AppShell: React.FC<AppShellProps> = ({
   // Derive breadcrumbs for Explorer view or Standard Route views
   const isExplorer = currentPath === "/explorer";
   const ws = isExplorer ? getWorkspaceById(selection.workspaceId) : undefined;
+  const activeAgent = isExplorer && selection.agentId ? WORKSPACE_AGENTS.find((a) => a.id === selection.agentId) : undefined;
   const f = isExplorer && selection.folderId ? getFolderById(selection.folderId)?.folder : undefined;
   const s = isExplorer && selection.sheetId ? getSheetById(selection.sheetId)?.sheet : undefined;
+  const activeTab = s?.tabs.find((t) => t.id === selection.tabId)?.label || selection.tabId;
 
   return (
     <div className={`os-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-theme={theme}>
@@ -227,8 +230,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           <div className="os-topbar-left">
             <button
               type="button"
-              className={`os-sidebar-toggle-btn ${sidebarCollapsed ? "is-collapsed" : ""}`}
-              aria-label={sidebarCollapsed ? "Expand sidebar navigation (Ctrl+\\)" : "Collapse sidebar navigation (Ctrl+\\)"}
+              className={`os-sidebar-toggle-btn os-mobile-menu-btn ${sidebarCollapsed ? "is-collapsed" : ""}`}
+              aria-label="Toggle navigation drawer"
               title={sidebarCollapsed ? "Expand sidebar navigation (Ctrl+\\)" : "Collapse sidebar navigation (Ctrl+\\)"}
               onClick={handleToggleSidebar}
             >
@@ -241,26 +244,32 @@ export const AppShell: React.FC<AppShellProps> = ({
 
               {isExplorer ? (
                 <>
-                  <button
-                    type="button"
-                    className="os-breadcrumb-btn"
-                    onClick={() =>
-                      onNavigate("/explorer", {
-                        ws: ws?.id || "ws_bagomuse"
-                      })
-                    }
-                  >
-                    {ws?.name || "Workspace"}
-                  </button>
-
-                  {f && (
+                  {activeAgent && (
                     <>
-                      <span className="os-breadcrumb-sep">/</span>
                       <button
                         type="button"
                         className="os-breadcrumb-btn"
                         onClick={() =>
                           onNavigate("/explorer", {
+                            agent: activeAgent.id,
+                            ws: activeAgent.defaultWorkspaceId
+                          })
+                        }
+                      >
+                        {activeAgent.name}
+                      </button>
+                      <span className="os-breadcrumb-sep">/</span>
+                    </>
+                  )}
+
+                  {f && (
+                    <>
+                      <button
+                        type="button"
+                        className="os-breadcrumb-btn"
+                        onClick={() =>
+                          onNavigate("/explorer", {
+                            ...(activeAgent ? { agent: activeAgent.id } : {}),
                             ws: ws?.id || "ws_bagomuse",
                             folder: f.id
                           })
@@ -268,21 +277,46 @@ export const AppShell: React.FC<AppShellProps> = ({
                       >
                         {f.name}
                       </button>
+                      <span className="os-breadcrumb-sep">/</span>
                     </>
                   )}
 
                   {s && (
                     <>
-                      <span className="os-breadcrumb-sep">/</span>
-                      <span className="os-breadcrumb-current" aria-current="page">
+                      <button
+                        type="button"
+                        className="os-breadcrumb-btn"
+                        onClick={() =>
+                          onNavigate("/explorer", {
+                            ...(activeAgent ? { agent: activeAgent.id } : {}),
+                            ws: ws?.id || "ws_bagomuse",
+                            ...(f ? { folder: f.id } : {}),
+                            sheet: s.id
+                          })
+                        }
+                      >
                         {s.name}
-                      </span>
+                      </button>
+                      {activeTab && (
+                        <>
+                          <span className="os-breadcrumb-sep">/</span>
+                          <span className="os-breadcrumb-current" aria-current="page">
+                            {activeTab}
+                          </span>
+                        </>
+                      )}
                     </>
                   )}
 
-                  {!s && (
+                  {!s && !f && activeAgent && (
                     <span className="os-breadcrumb-current" aria-current="page">
-                      {f?.name || ws?.name || meta.title}
+                      Workspace
+                    </span>
+                  )}
+
+                  {!s && f && (
+                    <span className="os-breadcrumb-current" aria-current="page">
+                      {f.name}
                     </span>
                   )}
                 </>

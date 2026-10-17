@@ -69,8 +69,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           type="button"
           className="os-sidebar-close-btn"
-          aria-label="Collapse sidebar navigation"
-          title="Collapse navigation sidebar"
+          aria-label={mobileOpen ? "Close navigation drawer" : "Collapse sidebar navigation (Ctrl+\\)"}
+          title={mobileOpen ? "Close navigation drawer" : "Collapse sidebar to the left (Ctrl+\\)"}
           onClick={() => {
             if (mobileOpen) {
               onCloseMobile();
@@ -81,7 +81,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }
           }}
         >
-          <Icon name="close" size={14} />
+          {mobileOpen ? (
+            <Icon name="close" size={14} />
+          ) : (
+            <span style={{ fontSize: "16px", fontWeight: "bold", lineHeight: 1 }} aria-hidden="true">‹</span>
+          )}
         </button>
       </div>
 
