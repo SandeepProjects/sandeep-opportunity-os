@@ -502,6 +502,10 @@ textarea {
   cursor: pointer;
 }
 
+.os-sidebar-toggle-btn.is-collapsed {
+  display: inline-flex !important;
+}
+
 .os-breadcrumbs {
   display: flex;
   align-items: center;
