@@ -73,12 +73,43 @@ export const AppShell: React.FC<AppShellProps> = ({
   onSelectTab
 }) => {
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return window.localStorage.getItem("sandeep_opp_os_sidebar_collapsed") === "true";
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   const [globalQuery, setGlobalQuery] = useState<string>("");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Keyboard shortcut '/' to focus search
+  const handleToggleSidebar = () => {
+    if (typeof window !== "undefined" && window.innerWidth <= 768) {
+      setMobileOpen((prev) => !prev);
+    } else {
+      setSidebarCollapsed((prev) => {
+        const next = !prev;
+        try {
+          window.localStorage.setItem("sandeep_opp_os_sidebar_collapsed", String(next));
+        } catch (e) {
+          void e;
+        }
+        return next;
+      });
+    }
+  };
+
+  // Keyboard shortcuts: '/' to focus search, Ctrl+\ to toggle sidebar
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "\\" || e.key === "b" || e.key === "B")) {
+        e.preventDefault();
+        handleToggleSidebar();
+        return;
+      }
       if (
         e.key === "/" &&
         document.activeElement?.tagName !== "INPUT" &&
@@ -160,7 +191,16 @@ export const AppShell: React.FC<AppShellProps> = ({
   const s = isExplorer && selection.sheetId ? getSheetById(selection.sheetId)?.sheet : undefined;
 
   return (
-    <div className="os-shell" data-theme={theme}>
+    <div className={`os-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-theme={theme}>
+      {/* Mobile Drawer Backdrop Overlay */}
+      {mobileOpen && (
+        <div
+          className="os-sidebar-backdrop"
+          aria-hidden="true"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       <Sidebar
         currentPath={currentPath}
         onNavigate={onNavigate}
@@ -171,6 +211,8 @@ export const AppShell: React.FC<AppShellProps> = ({
         isSyncing={isSyncing}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={handleToggleSidebar}
         selection={selection}
         onSelectAgent={onSelectAgent}
         onSelectWorkspace={onSelectWorkspace}
@@ -185,9 +227,10 @@ export const AppShell: React.FC<AppShellProps> = ({
           <div className="os-topbar-left">
             <button
               type="button"
-              className="os-mobile-menu-btn"
-              aria-label="Toggle navigation drawer"
-              onClick={() => setMobileOpen((prev) => !prev)}
+              className={`os-sidebar-toggle-btn ${sidebarCollapsed ? "is-collapsed" : ""}`}
+              aria-label={sidebarCollapsed ? "Expand sidebar navigation (Ctrl+\\)" : "Collapse sidebar navigation (Ctrl+\\)"}
+              title={sidebarCollapsed ? "Expand sidebar navigation (Ctrl+\\)" : "Collapse sidebar navigation (Ctrl+\\)"}
+              onClick={handleToggleSidebar}
             >
               <Icon name="menu" size={16} />
             </button>

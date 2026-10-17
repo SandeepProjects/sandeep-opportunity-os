@@ -21,6 +21,8 @@ interface SidebarProps {
   isSyncing?: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   selection: ExplorerSelection;
   onSelectAgent: (agent: ExplorerAgent) => void;
   onSelectWorkspace: (workspace: WorkspaceConfig) => void;
@@ -37,6 +39,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleTheme,
   mobileOpen,
   onCloseMobile,
+  collapsed = false,
+  onToggleCollapse,
   selection,
   onSelectAgent,
   onSelectWorkspace,
@@ -48,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`os-sidebar ${mobileOpen ? "mobile-open open" : ""}`}
+      className={`os-sidebar ${mobileOpen ? "mobile-open open" : ""} ${collapsed ? "collapsed" : ""}`}
       aria-label="Opportunity OS Drive Explorer & Command Center"
     >
       {/* 1. Header Branding */}
@@ -65,10 +69,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           type="button"
           className="os-sidebar-close-btn"
-          aria-label="Close navigation sidebar"
-          onClick={onCloseMobile}
+          aria-label="Collapse sidebar navigation"
+          title="Collapse navigation sidebar"
+          onClick={() => {
+            if (mobileOpen) {
+              onCloseMobile();
+            } else if (onToggleCollapse) {
+              onToggleCollapse();
+            } else {
+              onCloseMobile();
+            }
+          }}
         >
-          <Icon name="close" size={16} />
+          <Icon name="close" size={14} />
         </button>
       </div>
 

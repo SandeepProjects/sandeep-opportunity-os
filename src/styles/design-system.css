@@ -175,13 +175,18 @@ textarea {
 }
 
 /* ==========================================================================
-   APP SHELL & SIDEBAR (244px Fixed Desktop, Slide-Over Mobile)
+   APP SHELL & SIDEBAR (244px Fixed Desktop, Slide-Over Mobile, Collapsible)
    ========================================================================== */
 .os-shell {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
   background-color: var(--bg-canvas);
+  transition: grid-template-columns 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.os-shell.sidebar-collapsed {
+  grid-template-columns: 0px minmax(0, 1fr);
 }
 
 .os-sidebar {
@@ -197,6 +202,88 @@ textarea {
   border-right: 1px solid var(--border-subtle);
   user-select: none;
   z-index: 30;
+  width: var(--sidebar-width);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.os-shell.sidebar-collapsed .os-sidebar {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+  border-right-color: transparent;
+}
+
+.os-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 45;
+  animation: osBackdropFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes osBackdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.os-sidebar-close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.os-sidebar-close-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+  transform: scale(1.05);
+}
+
+.os-sidebar-close-btn:active {
+  transform: scale(0.95);
+}
+
+.os-sidebar-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.os-sidebar-toggle-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.os-sidebar-toggle-btn:active {
+  transform: translateY(0);
 }
 
 .os-sidebar-brand {
@@ -207,6 +294,7 @@ textarea {
   justify-content: space-between;
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
+  gap: 12px;
 }
 
 .os-brand-identity {
@@ -369,9 +457,8 @@ textarea {
 }
 
 .os-sidebar-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  display: flex;
+  width: 100%;
 }
 
 /* ==========================================================================
@@ -656,19 +743,44 @@ textarea {
 
 .os-metric-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1280px) {
+  .os-metric-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .os-metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .os-metric-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 .os-metric-card {
-  padding: 12px 14px;
+  padding: 16px 18px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   box-shadow: var(--shadow-sm);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.os-metric-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-default);
 }
 
 .os-metric-top {
@@ -823,7 +935,7 @@ textarea {
   position: sticky;
   top: 0;
   z-index: 5;
-  padding: 9px 14px;
+  padding: 12px 16px;
   background-color: var(--bg-elevated);
   border-bottom: 1px solid var(--border-default);
   font-family: var(--font-display);
@@ -858,7 +970,7 @@ textarea {
 }
 
 .os-table td {
-  padding: 10px 14px;
+  padding: 12px 16px;
   vertical-align: middle;
 }
 
@@ -1146,7 +1258,8 @@ textarea {
 }
 
 @media (max-width: 768px) {
-  .os-shell {
+  .os-shell,
+  .os-shell.sidebar-collapsed {
     grid-template-columns: 1fr;
   }
   .os-sidebar {
@@ -1163,14 +1276,19 @@ textarea {
     display: flex;
     flex-direction: column;
     transform: translateX(-100%);
-    transition: transform var(--transition-fast);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
     box-shadow: var(--shadow-drawer);
     z-index: 50;
+    opacity: 0;
+    pointer-events: none;
   }
   .os-sidebar.mobile-open,
   .os-sidebar.open {
     transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
   }
+  .os-sidebar-toggle-btn,
   .os-mobile-menu-btn {
     display: inline-flex;
   }
@@ -1421,10 +1539,10 @@ textarea {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   cursor: pointer;
   position: relative;
   transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -1494,10 +1612,10 @@ textarea {
   border: 1px solid var(--border-subtle);
   border-left: 3px solid var(--accent-primary);
   border-radius: var(--radius-xs);
-  padding: 6px 10px;
-  font-size: 11.5px;
+  padding: 8px 12px;
+  font-size: 12px;
   color: var(--text-secondary);
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .os-spotlight-footer {

@@ -55,6 +55,19 @@ export function computeFingerprint(item) {
     .replace(/\([^)]*\)/g, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+
+  // If org or title are generic/empty placeholders, include URL or ID to prevent destructive collapse
+  const isGenericOrg = !org || ["social community", "direct employer", "not stated", "unknown", "na", "n a"].includes(org);
+  const isGenericTitle = !title || ["lead", "job", "software engineer", "developer", "opportunity"].includes(title);
+  if (isGenericOrg && isGenericTitle) {
+    if (item.source_url) {
+      return `${cat}::${org}::${title}::${canonicalizeUrl(item.source_url)}`;
+    }
+    if (item.id) {
+      return `${cat}::${org}::${title}::${item.id}`;
+    }
+  }
+
   return `${cat}::${org}::${title}`;
 }
 

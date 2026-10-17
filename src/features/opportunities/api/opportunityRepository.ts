@@ -1,6 +1,6 @@
 import { supabaseClient, isSupabaseConfigured } from "../../../lib/supabase/client";
 import verifiedSeed from "../../../data/verified_seed_24.json";
-import { applyWorkflowTransition, syncDatabaseToSheetRows, deduplicateOpportunities } from "../../../engine/core";
+import { applyWorkflowTransition, syncDatabaseToSheetRows } from "../../../engine/core";
 import { executeSyncPipeline, loadLatestSyncTelemetry, type SyncTelemetry, type SourceSyncDiagnostic } from "../../../pipeline/syncService";
 import { getNextScheduledSync } from "../../../config/dataSources";
 import { saveCachedOpportunities, getCachedOpportunities } from "../../../lib/cache/opportunityCache";
@@ -233,7 +233,16 @@ export async function getFastCachedState(): Promise<RepositoryState | null> {
     };
   });
 
-  const { deduplicated: deduplicatedCached } = deduplicateOpportunities(merged);
+  const seenCachedIds = new Set<string>();
+  const deduplicatedCached: OpportunityRecord[] = [];
+  for (const opp of merged) {
+    if (opp.id && !seenCachedIds.has(opp.id)) {
+      seenCachedIds.add(opp.id);
+      deduplicatedCached.push(opp);
+    } else if (!opp.id) {
+      deduplicatedCached.push(opp);
+    }
+  }
 
   return {
     mode: isSupabaseConfigured && supabaseClient ? "SUPABASE_LIVE" : "SEED_IMPORT_ADAPTER",
@@ -276,8 +285,17 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
           };
         });
 
-        const { deduplicated } = deduplicateOpportunities(mergedOpps);
-        const finalOpps = deduplicated.filter(isProductionOpportunity);
+        const seenNeonIds = new Set<string>();
+        const uniqueNeonOpps: OpportunityRecord[] = [];
+        for (const opp of mergedOpps) {
+          if (opp.id && !seenNeonIds.has(opp.id)) {
+            seenNeonIds.add(opp.id);
+            uniqueNeonOpps.push(opp);
+          } else if (!opp.id) {
+            uniqueNeonOpps.push(opp);
+          }
+        }
+        const finalOpps = uniqueNeonOpps.filter(isProductionOpportunity);
         void saveCachedOpportunities(finalOpps);
 
         let telemetry = data.telemetry as SyncTelemetry | null;
@@ -352,8 +370,17 @@ export async function fetchOpportunityState(): Promise<RepositoryState> {
 
         const persistedMap = loadPersistedCrmMap();
         const mappedOpportunities = mapSupabaseRowsToOpportunities(data, persistedMap);
-        const { deduplicated } = deduplicateOpportunities(mappedOpportunities);
-        const finalOpps = deduplicated.filter(isProductionOpportunity);
+        const seenSbIds = new Set<string>();
+        const uniqueSbOpps: OpportunityRecord[] = [];
+        for (const opp of mappedOpportunities) {
+          if (opp.id && !seenSbIds.has(opp.id)) {
+            seenSbIds.add(opp.id);
+            uniqueSbOpps.push(opp);
+          } else if (!opp.id) {
+            uniqueSbOpps.push(opp);
+          }
+        }
+        const finalOpps = uniqueSbOpps.filter(isProductionOpportunity);
 
         // Cache opportunities persistently for zero-latency retrieval and offline durability
         void saveCachedOpportunities(finalOpps);
